@@ -8,7 +8,7 @@ session_start();
 
 // Base path
 define('BASE_PATH', __DIR__);
-define('BASE_URL', '/mcstore');
+define('BASE_URL', '');
 
 // Load core
 require_once BASE_PATH . '/classes/Database.php';
