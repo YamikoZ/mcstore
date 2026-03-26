@@ -10,7 +10,7 @@
  * ชั้นที่ 6 — Cache + Grace period : เร็ว + ทนทานถ้า GitHub ล่ม
  */
 class License {
-    const CACHE_TTL  = 3600;
+    const CACHE_TTL  = 86400;  // cache 24 ชม.
     const GRACE_DAYS = 7;
 
     private static $result = null;
@@ -36,7 +36,6 @@ class License {
         self::$result = null;
     }
 
-    /** เรียกจาก API endpoint สำคัญ — ถ้าไม่ผ่านตอบ 403 ทันที */
     public static function requireValid(): void {
         if (!self::check()) {
             http_response_code(403);
@@ -83,15 +82,12 @@ class License {
         $data = json_decode($content, true);
         if (!is_array($data)) return false;
 
-        // ชั้น 4: Remote integrity — Gist เก็บ hash ของ License.php
-        // ถ้าไฟล์ถูกแก้ไข hash จะไม่ตรง
+        // ชั้น 4: Remote integrity
         $expectedHash = $data['_meta']['license_hash'] ?? null;
         if ($expectedHash !== null) {
-            $actualHash = hash_file('sha256', __FILE__);
-            if (!hash_equals($expectedHash, $actualHash)) return false;
+            if (!hash_equals($expectedHash, hash_file('sha256', __FILE__))) return false;
         }
 
-        // ชั้น 1+2+3: Validate key + Activation lock
         if (!isset($data[$key])) return false;
 
         $lic    = $data[$key];
@@ -106,7 +102,7 @@ class License {
         if (empty($licDomain)) {
             $data[$key]['domain']       = $domain;
             $data[$key]['activated_at'] = date('Y-m-d H:i:s');
-            $data[$key]['activated_ip'] = $_SERVER['SERVER_ADDR'] ?? gethostbyname(gethostname());
+            $data[$key]['activated_ip'] = $_SERVER['SERVER_ADDR'] ?? '';
             $newContent = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             self::githubPatch($cfg['gist_id'], $cfg['token'], $filename, $newContent);
             return true;
@@ -118,26 +114,49 @@ class License {
     // ─── GitHub API ───────────────────────────────────────────
 
     private static function githubGet(string $gistId, string $token): ?string {
-        if (!function_exists('curl_init')) return null;
+        $url = "https://api.github.com/gists/{$gistId}";
+        $headers = [
+            'Authorization: Bearer ' . $token,
+            'User-Agent: MCStore-License/1.0',
+            'Accept: application/vnd.github+json',
+        ];
 
-        $ch = curl_init("https://api.github.com/gists/{$gistId}");
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => 8,
-            CURLOPT_CONNECTTIMEOUT => 5,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
-            CURLOPT_HTTPHEADER     => [
-                'Authorization: Bearer ' . $token,
-                'User-Agent: MCStore-License/1.0',
-                'Accept: application/vnd.github+json',
-            ],
-        ]);
-        $body = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        // ลอง curl ก่อน
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 8,
+                CURLOPT_CONNECTTIMEOUT => 5,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => false,
+                CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
+                CURLOPT_HTTPHEADER     => $headers,
+            ]);
+            $body = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($code === 200 && $body) return $body;
+        }
 
-        return ($code === 200 && $body) ? $body : null;
+        // Fallback: file_get_contents
+        if (ini_get('allow_url_fopen')) {
+            $ctx = stream_context_create([
+                'http' => [
+                    'timeout' => 8,
+                    'header'  => implode("\r\n", $headers),
+                    'method'  => 'GET',
+                ],
+                'ssl' => [
+                    'verify_peer'      => false,
+                    'verify_peer_name' => false,
+                ],
+            ]);
+            $body = @file_get_contents($url, false, $ctx);
+            if ($body !== false) return $body;
+        }
+
+        return null;
     }
 
     private static function githubPatch(string $gistId, string $token, string $filename, string $content): void {
@@ -147,8 +166,11 @@ class License {
         $ch = curl_init("https://api.github.com/gists/{$gistId}");
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => 10,
-            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_TIMEOUT        => 8,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
             CURLOPT_CUSTOMREQUEST  => 'PATCH',
             CURLOPT_POSTFIELDS     => $payload,
             CURLOPT_HTTPHEADER     => [
