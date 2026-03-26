@@ -1,0 +1,9 @@
+# Block direct PHP execution in uploads
+<FilesMatch "\.ph(p[345s]?|t|tml)$">
+    Require all denied
+</FilesMatch>
+
+# Allow only images
+<FilesMatch "\.(jpg|jpeg|png|webp|gif)$">
+    Require all granted
+</FilesMatch>
