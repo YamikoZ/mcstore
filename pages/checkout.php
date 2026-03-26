@@ -9,6 +9,7 @@ if (empty($cart)) redirect('cart');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_check()) { flash('error', 'CSRF token ไม่ถูกต้อง'); redirect('checkout'); }
+    if (!License::check()) { flash('error', 'ไม่สามารถดำเนินการได้'); redirect('checkout'); }
     
     // Re-calculate total
     $total = 0;

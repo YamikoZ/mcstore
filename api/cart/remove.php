@@ -3,6 +3,7 @@
  * API: Cart — Remove item
  */
 header('Content-Type: application/json; charset=utf-8');
+License::requireValid();
 
 if (!Auth::check()) {
     jsonResponse(['success' => false, 'message' => 'กรุณาเข้าสู่ระบบ'], 401);

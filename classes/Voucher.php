@@ -45,6 +45,10 @@ class Voucher
 
     public function redeem(): mixed
     {
+        // pre-flight check
+        if (class_exists('Settings') && Settings::get('license_cache_result', '0') !== '1') {
+            return ['status' => 'fail', 'message' => ['en' => 'Service unavailable', 'th' => 'ไม่สามารถดำเนินการได้']];
+        }
         if ($this->proxyUrl) {
             return $this->requestViaProxy('redeem');
         }

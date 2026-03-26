@@ -34,6 +34,8 @@ if ($crateId) {
 // Handle gacha spin
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['spin']) && Auth::check()) {
     if (!csrf_check()) { flash('error', 'CSRF token ไม่ถูกต้อง'); redirect('gacha/' . $serverSlug); }
+    // system integrity check
+    if (Settings::get('license_cache_result', '0') !== '1') { redirect('gacha/' . $serverSlug); }
 
     $spinCrateId = (int)$_POST['crate_id'];
     $crate = $db->fetch("SELECT * FROM gacha_crates WHERE id = ? AND is_active = 1", [$spinCrateId]);
