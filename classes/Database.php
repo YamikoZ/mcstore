@@ -41,8 +41,20 @@ class Database {
     }
 
     public function execute($sql, $params = []) {
-        $stmt = $this->pdo->prepare($sql);
-        return $stmt->execute($params);
+        $retries = 3;
+        while ($retries-- > 0) {
+            try {
+                $stmt = $this->pdo->prepare($sql);
+                return $stmt->execute($params);
+            } catch (PDOException $e) {
+                // 1205 = Lock wait timeout, 1213 = Deadlock — retry
+                if ($retries > 0 && in_array($e->errorInfo[1] ?? 0, [1205, 1213])) {
+                    usleep(300000); // รอ 0.3 วิแล้วลองใหม่
+                    continue;
+                }
+                throw $e;
+            }
+        }
     }
 
     public function lastInsertId() {
