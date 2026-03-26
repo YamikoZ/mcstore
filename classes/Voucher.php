@@ -90,18 +90,22 @@ class Voucher
         curl_close($ch);
 
         if ($resp === false) {
-            return $this->err('PROXY_ERROR', 'ไม่สามารถเชื่อมต่อ Proxy: ' . $curlErr);
+            error_log('[MCStore][Voucher] Proxy connection failed: ' . $curlErr);
+            return $this->err('PROXY_ERROR', 'ไม่สามารถเชื่อมต่อระบบได้ กรุณาลองใหม่');
         }
         if ($httpCode === 401) {
-            return $this->err('PROXY_AUTH', 'Proxy API Key ไม่ถูกต้อง');
+            error_log('[MCStore][Voucher] Proxy auth failed (401)');
+            return $this->err('PROXY_AUTH', 'ระบบขัดข้อง กรุณาติดต่อผู้ดูแล');
         }
         if ($httpCode < 200 || $httpCode >= 500) {
-            return $this->err('PROXY_ERROR', "Proxy HTTP {$httpCode}");
+            error_log('[MCStore][Voucher] Proxy returned HTTP ' . $httpCode);
+            return $this->err('PROXY_ERROR', 'ระบบขัดข้อง กรุณาลองใหม่ภายหลัง');
         }
 
         $decoded = json_decode($resp);
         if ($decoded === null) {
-            return $this->err('PARSE_ERROR', 'Proxy returned invalid JSON');
+            error_log('[MCStore][Voucher] Proxy returned invalid JSON: ' . substr($resp, 0, 200));
+            return $this->err('PARSE_ERROR', 'ระบบขัดข้อง กรุณาลองใหม่');
         }
 
         // Proxy returns { proxy_error, data } — unwrap
@@ -150,7 +154,8 @@ class Voucher
         $raw = implode("\n", $output);
 
         if ($exitCode !== 0) {
-            return $this->err('EXEC_ERROR', "curl-impersonate exit {$exitCode}: " . substr($raw, 0, 200));
+            error_log('[MCStore][Voucher] curl-impersonate exit ' . $exitCode . ': ' . substr($raw, 0, 200));
+            return $this->err('EXEC_ERROR', 'ระบบขัดข้อง กรุณาลองใหม่ภายหลัง');
         }
 
         $lines    = explode("\n", trim($raw));

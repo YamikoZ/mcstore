@@ -131,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 };
                 $uploadDir = BASE_PATH . '/uploads/settings/';
                 if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
+                    mkdir($uploadDir, 0750, true);
                 }
                 $filename = $settingKey . '_' . time() . '.' . $ext;
                 if (move_uploaded_file($file['tmp_name'], $uploadDir . $filename)) {

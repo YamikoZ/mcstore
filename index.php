@@ -38,6 +38,11 @@ if (Settings::get('maintenance_mode') === '1') {
 {
     // รับ POST จากหน้า license setup (ไม่ต้อง login)
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'setup_license') {
+        // อนุญาตเฉพาะเมื่อยังไม่มี license ที่ valid เท่านั้น
+        if (License::check()) {
+            header('Location: ' . url(''));
+            exit;
+        }
         csrf_check();
         $submittedKey = trim($_POST['license_key'] ?? '');
         Settings::set('license_key', $submittedKey);
@@ -46,7 +51,7 @@ if (Settings::get('maintenance_mode') === '1') {
             header('Location: ' . url(''));
         } else {
             $_SESSION['license_error'] = 'License Key ไม่ถูกต้อง หรือ domain ไม่ตรง';
-            header('Location: ' . $_SERVER['REQUEST_URI']);
+            header('Location: ' . url(''));  // redirect ไป home แทน REQUEST_URI
         }
         exit;
     }
