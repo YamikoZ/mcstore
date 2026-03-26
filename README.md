@@ -76,7 +76,18 @@ mysql -u root -p mcstore < mcstore.sql
 
 ระบบนี้ต้องมี **License Key** เพื่อใช้งาน
 
-ติดต่อขอ License ได้ที่ผู้พัฒนา key จะถูกผูกกับ domain ของคุณโดยอัตโนมัติเมื่อใช้ครั้งแรก
+### ราคา
+
+| แพ็กเกจ | ราคา | หมายเหตุ |
+|---------|------|---------|
+| License Key (ถาวร) | **350 บาท** | 1 key ต่อ 1 domain |
+
+- Key จะถูกผูกกับ domain ของคุณโดยอัตโนมัติเมื่อใช้ครั้งแรก
+- ย้าย domain ต้องขอ key ใหม่
+
+### ขอรับ License
+
+เปิด Issue ได้ที่ → **[GitHub Issues](https://github.com/YamikoZ/mcstore/issues/new?title=ขอ%20License%20Key&body=**Domain:**%20%60yourdomain.com%60%0A%0A**ชื่อเว็บ%20/%20ร้านค้า:**%0A%0A**ช่องทางติดต่อ:**&labels=license)**
 
 ---
 

@@ -10,10 +10,13 @@
  * ชั้นที่ 6 — Cache + Grace period : เร็ว + ทนทานถ้า GitHub ล่ม
  */
 class License {
-    const CACHE_TTL  = 86400;  // cache 24 ชม.
-    const GRACE_DAYS = 7;
+    const CACHE_TTL         = 0;      // ไม่ cache — ตรวจ GitHub ทุก request
+    const REVOKED_CACHE_TTL = 0;      // ไม่ cache
+    const GRACE_DAYS        = 7;      // ถ้า GitHub ล่ม → ใช้ผลเดิม 7 วัน
 
-    private static $result = null;
+    private static $result         = null;
+    private static $reason         = null;  // 'valid','revoked','expired','domain_mismatch','invalid','no_key','network'
+    private static $cachedExpires  = null;  // เก็บ expires date จาก Gist เพื่อ save ลง cache
 
     // ─── Public ───────────────────────────────────────────────
 
@@ -21,19 +24,31 @@ class License {
         if (self::$result !== null) return self::$result;
 
         $key = Settings::get('license_key', '');
-        if (!$key) return self::$result = false;
+        if (!$key) {
+            self::$reason = 'no_key';
+            return self::$result = false;
+        }
 
         $cached = self::getCached();
         if ($cached !== null) return self::$result = $cached;
 
         $valid = self::fetchValidateActivate($key);
-        self::saveCache($valid);
+        self::saveCache($valid, self::$reason ?? ($valid ? 'valid' : 'invalid'), self::$cachedExpires ?? '');
         return self::$result = $valid;
+    }
+
+    public static function reason(): ?string {
+        if (self::$result === null) self::check();
+        return self::$reason;
     }
 
     public static function bust(): void {
         Settings::set('license_cache_time', '0');
-        self::$result = null;
+        Settings::set('license_cache_reason', '');
+        Settings::set('license_cache_expires', '');
+        self::$result        = null;
+        self::$reason        = null;
+        self::$cachedExpires = null;
     }
 
     public static function requireValid(): void {
@@ -56,6 +71,7 @@ class License {
             'cached_at' => $cachedAt > 0 ? date('d/m/Y H:i:s', $cachedAt) : null,
             'domain'    => $_SERVER['HTTP_HOST'] ?? '',
             'valid'     => self::check(),
+            'reason'    => self::reason(),
         ];
     }
 
@@ -63,10 +79,16 @@ class License {
 
     private static function fetchValidateActivate(string $key): bool {
         $cfg = self::config();
-        if (!$cfg) return false;
+        if (!$cfg) {
+            self::$reason = 'invalid';
+            return false;
+        }
 
         $response = self::githubGet($cfg['gist_id'], $cfg['token']);
-        if ($response === null) return self::graceCache();
+        if ($response === null) {
+            self::$reason = 'network';
+            return self::graceCache();
+        }
 
         $gist    = json_decode($response, true);
         $files   = $gist['files'] ?? [];
@@ -77,24 +99,45 @@ class License {
             $filename = $fname;
             if ($content) break;
         }
-        if (!$content || !$filename) return false;
+        if (!$content || !$filename) {
+            self::$reason = 'invalid';
+            return false;
+        }
 
         $data = json_decode($content, true);
-        if (!is_array($data)) return false;
+        if (!is_array($data)) {
+            self::$reason = 'invalid';
+            return false;
+        }
 
         // ชั้น 4: Remote integrity
         $expectedHash = $data['_meta']['license_hash'] ?? null;
         if ($expectedHash !== null) {
-            if (!hash_equals($expectedHash, hash_file('sha256', __FILE__))) return false;
+            if (!hash_equals($expectedHash, hash_file('sha256', __FILE__))) {
+                self::$reason = 'invalid';
+                return false;
+            }
         }
 
-        if (!isset($data[$key])) return false;
+        if (!isset($data[$key])) {
+            self::$reason = 'invalid';
+            return false;
+        }
 
         $lic    = $data[$key];
         $domain = $_SERVER['HTTP_HOST'] ?? '';
 
-        if (!($lic['active'] ?? false)) return false;
-        if (strtotime($lic['expires'] ?? '0') <= time()) return false;
+        // ชั้น 2: ถูกระงับ
+        if (!($lic['active'] ?? false)) {
+            self::$reason = 'revoked';
+            return false;
+        }
+
+        // หมดอายุ
+        if (strtotime($lic['expires'] ?? '0') <= time()) {
+            self::$reason = 'expired';
+            return false;
+        }
 
         $licDomain = $lic['domain'] ?? '';
 
@@ -105,10 +148,18 @@ class License {
             $data[$key]['activated_ip'] = $_SERVER['SERVER_ADDR'] ?? '';
             $newContent = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             self::githubPatch($cfg['gist_id'], $cfg['token'], $filename, $newContent);
+            self::$reason = 'valid';
             return true;
         }
 
-        return $licDomain === $domain;
+        if ($licDomain !== $domain) {
+            self::$reason = 'domain_mismatch';
+            return false;
+        }
+
+        self::$reason        = 'valid';
+        self::$cachedExpires = $lic['expires'] ?? '';
+        return true;
     }
 
     // ─── GitHub API ───────────────────────────────────────────
@@ -121,7 +172,6 @@ class License {
             'Accept: application/vnd.github+json',
         ];
 
-        // ลอง curl ก่อน
         if (function_exists('curl_init')) {
             $ch = curl_init($url);
             curl_setopt_array($ch, [
@@ -139,7 +189,6 @@ class License {
             if ($code === 200 && $body) return $body;
         }
 
-        // Fallback: file_get_contents
         if (ini_get('allow_url_fopen')) {
             $ctx = stream_context_create([
                 'http' => [
@@ -187,23 +236,48 @@ class License {
     // ─── Cache ────────────────────────────────────────────────
 
     private static function getCached(): ?bool {
-        $val  = Settings::get('license_cache_result');
-        $time = (int) Settings::get('license_cache_time', '0');
+        $val     = Settings::get('license_cache_result');
+        $time    = (int) Settings::get('license_cache_time', '0');
+        $reason  = Settings::get('license_cache_reason', '');
+        $expires = Settings::get('license_cache_expires', '');
+
         if ($val === null || $time === 0) return null;
-        if (time() - $time > self::CACHE_TTL) return null;
+
+        // ตรวจ expires ทันทีแบบ local — ไม่ต้องรอ cache หมด
+        if ($val === '1' && $expires && strtotime($expires) <= time()) {
+            self::$reason = 'expired';
+            self::saveCache(false, 'expired');
+            return false;
+        }
+
+        // revoked → short TTL (5 นาที) เพื่อให้มีผลเร็ว
+        $ttl = ($reason === 'revoked') ? self::REVOKED_CACHE_TTL : self::CACHE_TTL;
+        if (time() - $time > $ttl) return null;
+
+        if ($val === '0' && $reason) self::$reason = $reason;
         return $val === '1';
     }
 
-    private static function saveCache(bool $valid): void {
+    private static function saveCache(bool $valid, string $reason = '', string $expires = ''): void {
         Settings::set('license_cache_result', $valid ? '1' : '0');
-        Settings::set('license_cache_time',   (string) time());
+        Settings::set('license_cache_reason', $reason);
+        Settings::set('license_cache_expires', $expires);
+
+        // network error → ไม่อัปเดต timestamp (ใช้ grace period เดิม)
+        if ($reason !== 'network') {
+            Settings::set('license_cache_time', (string) time());
+        }
     }
 
     private static function graceCache(): bool {
         $val  = Settings::get('license_cache_result');
         $time = (int) Settings::get('license_cache_time', '0');
-        return $val === '1' && $time > 0
-            && (time() - $time) < (self::GRACE_DAYS * 86400);
+        if ($val === '1' && $time > 0 && (time() - $time) < (self::GRACE_DAYS * 86400)) {
+            self::$reason = 'valid';
+            return true;
+        }
+        self::$reason = 'network';
+        return false;
     }
 
     private static function config(): ?array {

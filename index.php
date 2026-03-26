@@ -55,7 +55,12 @@ if (Settings::get('maintenance_mode') === '1') {
     $licPage   = explode('/', $licRoute)[0] ?? '';
     $licExempt = ['admin', 'api', 'assets'];
     if (!in_array($licPage, $licExempt) && !License::check()) {
-        require BASE_PATH . '/pages/license_invalid.php';
+        $licReason = License::reason();
+        if ($licReason === 'revoked') {
+            require BASE_PATH . '/pages/license_suspended.php';
+        } else {
+            require BASE_PATH . '/pages/license_invalid.php';
+        }
         exit;
     }
 }

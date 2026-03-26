@@ -1,11 +1,11 @@
 RewriteEngine On
-RewriteBase /mcstore/
+RewriteBase /
 
 # ถ้าเป็นไฟล์จริง (รูป, CSS, JS) → ส่งตรง
 RewriteCond %{REQUEST_FILENAME} !-f
 
 # ยกเว้นโฟลเดอร์ assets และ uploads เท่านั้น
-RewriteCond %{REQUEST_URI} !^/mcstore/(assets|uploads)/ [NC]
+RewriteCond %{REQUEST_URI} !^/(assets|uploads)/ [NC]
 
 # ที่เหลือทั้งหมด → เข้า index.php
 RewriteRule ^(.*)$ index.php?route=$1 [QSA,L]
