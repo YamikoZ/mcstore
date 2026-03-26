@@ -4,6 +4,14 @@ define('BASE_PATH', __DIR__);
 require_once __DIR__ . '/classes/Database.php';
 require_once __DIR__ . '/classes/Settings.php';
 
+// ล้าง cache ทันที
+if (isset($_GET['clear'])) {
+    $db = Database::getInstance();
+    $db->execute("DELETE FROM settings WHERE setting_key IN ('license_cache_result','license_cache_time')");
+    header('Location: _debug_license.php');
+    exit;
+}
+
 $cfg      = require __DIR__ . '/config/license.php';
 $domain   = $_SERVER['HTTP_HOST'] ?? 'unknown';
 $savedKey = Settings::get('license_key', '(ยังไม่ได้ใส่)');
