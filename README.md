@@ -150,6 +150,36 @@ mcstore/
 
 ---
 
+## 🔄 อัปเดต
+
+เมื่อมีการอัปเดตใหม่ใน GitHub ให้รันคำสั่งนี้ในโฟลเดอร์ที่ติดตั้ง MCStore:
+
+```bash
+git pull
+```
+
+### สิ่งที่อัปเดตโดยอัตโนมัติ
+- ไฟล์ PHP ทั้งหมด (หน้าเว็บ, คลาส, API, Admin)
+- ไฟล์ CSS / JS / Assets
+- Bug fix และ Security patch
+
+### สิ่งที่ **ไม่** ถูกแตะต้อง (ปลอดภัย)
+- `config/database.php` — การตั้งค่าฐานข้อมูล
+- `config/license.php` — License config
+- `config/auth.php` — Auth mode
+- `uploads/` — รูปภาพที่อัปโหลด
+
+### หากมีการอัปเดต Database Schema
+
+ผู้พัฒนาจะแจ้งใน release notes หาก version ใหม่มีการเปลี่ยน schema ให้รัน SQL เพิ่มเติมที่แนบมาด้วย
+
+### ติดตามการอัปเดต
+
+- Watch repo นี้บน GitHub (⭐ Star → Watch → All Activity)
+- หรือเช็ค [Releases](https://github.com/YamikoZ/mcstore/releases) เป็นระยะ
+
+---
+
 ## 📝 หมายเหตุ
 
 - `config/database.php` และ `config/license.php` ไม่รวมใน repo ต้องสร้างเองจาก `.example.php`
