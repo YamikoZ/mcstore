@@ -28,10 +28,18 @@ if (!$productId || !$serverId) {
 }
 
 $db      = Database::getInstance();
+$user    = Auth::user();
+
 $product = $db->fetch("SELECT * FROM products WHERE id = ? AND is_active = 1", [$productId]);
 
 if (!$product) {
     jsonResponse(['success' => false, 'message' => 'ไม่พบสินค้า'], 404);
+}
+
+// ─── Validate server exists ───────────────────────────────────────────────
+$server = $db->fetch("SELECT id FROM servers WHERE id = ? AND is_active = 1", [$serverId]);
+if (!$server) {
+    jsonResponse(['success' => false, 'message' => 'ไม่พบเซิร์ฟเวอร์'], 400);
 }
 
 // ─── One-per-user check (แรงค์/VIP ห้ามซื้อซ้ำ) ──────────────────────────
@@ -42,20 +50,19 @@ if ($product['one_per_user']) {
          JOIN orders o ON oi.order_id = o.id
          WHERE o.username = ? AND oi.product_id = ? AND o.status NOT IN ('cancelled','refunded')
          LIMIT 1",
-        [$_SESSION['username'] ?? '', $productId]
+        [$user['username'], $productId]
     );
     if ($alreadyBought) {
         jsonResponse(['success' => false, 'message' => 'คุณมียศ/สิทธิ์นี้อยู่แล้ว ไม่สามารถซื้อซ้ำได้']);
     }
 }
 
-// ─── Stock check (-1 = unlimited) ────────────────────────────────────────
+// ─── Stock check เบื้องต้น (-1 = unlimited) ──────────────────────────────
 if ($product['stock'] >= 0 && $product['stock'] < $quantity) {
     jsonResponse(['success' => false, 'message' => 'สินค้าไม่เพียงพอ (เหลือ ' . (int)$product['stock'] . ')']);
 }
 
 // ─── Balance check ────────────────────────────────────────────────────────
-$user  = Auth::user();
 $total = (float) $product['price'] * $quantity;
 
 if ($user['balance'] < $total) {
@@ -76,11 +83,14 @@ if (empty($commands)) {
 // ─── Transaction ─────────────────────────────────────────────────────────
 $db->beginTransaction();
 try {
-    // Deduct balance
+    // Deduct balance (atomic — ป้องกัน race condition)
     $db->execute(
         "UPDATE users SET balance = balance - ? WHERE id = ? AND balance >= ?",
         [$total, $user['id'], $total]
     );
+    if ($db->rowCount() === 0) {
+        throw new Exception('ยอดเงินไม่เพียงพอ');
+    }
 
     // Create order
     $db->execute(
@@ -95,9 +105,15 @@ try {
         [$orderId, $product['id'], $serverId, $product['name'], $quantity, $product['price'], $product['command']]
     );
 
-    // Reduce stock
+    // Reduce stock (atomic — ป้องกัน race condition)
     if ($product['stock'] >= 0) {
-        $db->execute("UPDATE products SET stock = stock - ? WHERE id = ?", [$quantity, $product['id']]);
+        $db->execute(
+            "UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?",
+            [$quantity, $product['id'], $quantity]
+        );
+        if ($db->rowCount() === 0) {
+            throw new Exception('สินค้าไม่เพียงพอ');
+        }
     }
 
     // Delivery queue — วน quantity × commands (set items รองรับครบ)
@@ -133,5 +149,8 @@ try {
 
 } catch (Exception $e) {
     $db->rollback();
-    jsonResponse(['success' => false, 'message' => 'เกิดข้อผิดพลาด กรุณาลองใหม่'], 500);
+    $msg = in_array($e->getMessage(), ['ยอดเงินไม่เพียงพอ', 'สินค้าไม่เพียงพอ'])
+        ? $e->getMessage()
+        : 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+    jsonResponse(['success' => false, 'message' => $msg], 500);
 }

@@ -43,6 +43,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     $db->beginTransaction();
     try {
+        // Atomic max_uses increment — ป้องกัน race condition
+        $db->execute(
+            "UPDATE redeem_codes SET used_count = used_count + 1
+             WHERE id = ? AND (max_uses = 0 OR used_count < max_uses)",
+            [$redeemCode['id']]
+        );
+        if ($db->rowCount() === 0) {
+            throw new Exception('โค้ดนี้ถูกใช้ครบจำนวนแล้ว');
+        }
+
         $rewardType = $redeemCode['reward_type'];
         $rewardValue = $redeemCode['reward_value'];
         
@@ -74,15 +84,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Record usage
         $db->execute("INSERT INTO redeem_usage (code_id, username) VALUES (?, ?)", [$redeemCode['id'], $user['username']]);
-        $db->execute("UPDATE redeem_codes SET used_count = used_count + 1 WHERE id = ?", [$redeemCode['id']]);
-        
+
         $db->commit();
         auditLog($user['id'], 'redeem', "Redeemed code: {$code}");
         createNotification($user['id'], 'รีดีมสำเร็จ', $msg, 'success');
         flash('success', $msg);
     } catch (Exception $e) {
         $db->rollback();
-        flash('error', 'เกิดข้อผิดพลาด');
+        $knownErrors = ['โค้ดนี้ถูกใช้ครบจำนวนแล้ว'];
+        flash('error', in_array($e->getMessage(), $knownErrors) ? $e->getMessage() : 'เกิดข้อผิดพลาด');
     }
     redirect('redeem');
 }
