@@ -130,12 +130,19 @@ class Auth {
         if ($config['mode'] === 'plugin') {
             $webUser = $db->fetch("SELECT * FROM users WHERE authme_id = ?", [$pluginUser['id']]);
             if (!$webUser) {
-                // Auto-create web profile
-                $db->execute(
-                    "INSERT INTO users (username, email, authme_id, role, balance) VALUES (?, ?, ?, 'user', 0.00)",
-                    [$pluginUser['username'], $pluginUser['email'] ?? '', $pluginUser['id']]
-                );
-                $webUser = $db->fetch("SELECT * FROM users WHERE id = ?", [$db->lastInsertId()]);
+                // Fallback: find by username (handles bulk-migrated users without authme_id)
+                $webUser = $db->fetch("SELECT * FROM users WHERE LOWER(username) = LOWER(?)", [$pluginUser['username']]);
+                if ($webUser) {
+                    // Link authme_id
+                    $db->execute("UPDATE users SET authme_id = ? WHERE id = ?", [$pluginUser['id'], $webUser['id']]);
+                } else {
+                    // Auto-create web profile
+                    $db->execute(
+                        "INSERT INTO users (username, email, authme_id, role, balance) VALUES (?, ?, ?, 'user', 0.00)",
+                        [$pluginUser['username'], $pluginUser['email'] ?? '', $pluginUser['id']]
+                    );
+                    $webUser = $db->fetch("SELECT * FROM users WHERE id = ?", [$db->lastInsertId()]);
+                }
             }
         } else {
             $webUser = $db->fetch("SELECT * FROM users WHERE id = ?", [$pluginUser['id']]);
