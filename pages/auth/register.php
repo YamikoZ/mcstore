@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
-    if (!rateLimitCheck('register', 3, 600)) {
+    if (!rateLimitCheck('register', 10, 600)) {
         $errors[] = 'สมัครมากเกินไป กรุณารอ 10 นาที';
     }
     
