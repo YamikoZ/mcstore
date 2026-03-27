@@ -13,9 +13,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $action = $_POST['action'] ?? '';
 
+    // แปลง commands[] → JSON string หรือ plain string
+    $buildCommand = function() {
+        $cmds = array_values(array_filter(array_map('trim', $_POST['commands'] ?? [])));
+        if (empty($cmds)) return '';
+        return count($cmds) === 1 ? $cmds[0] : json_encode($cmds, JSON_UNESCAPED_UNICODE);
+    };
+
     if ($action === 'create') {
         $db->execute(
-            "INSERT INTO products (server_id, category_id, name, description, image, price, original_price, command, stock, is_featured, is_active, display_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO products (server_id, category_id, name, description, image, price, original_price, command, stock, is_featured, is_active, one_per_user, display_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 $_POST['server_id'],
                 $_POST['category_id'] ?: null,
@@ -24,10 +31,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 trim($_POST['image'] ?? ''),
                 (float)$_POST['price'],
                 $_POST['original_price'] ? (float)$_POST['original_price'] : null,
-                trim($_POST['command']),
+                $buildCommand(),
                 (int)$_POST['stock'],
                 isset($_POST['is_featured']) ? 1 : 0,
                 isset($_POST['is_active']) ? 1 : 0,
+                isset($_POST['one_per_user']) ? 1 : 0,
                 (int)($_POST['display_order'] ?? 0),
             ]
         );
@@ -39,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'update') {
         $id = (int)$_POST['id'];
         $db->execute(
-            "UPDATE products SET server_id=?, category_id=?, name=?, description=?, image=?, price=?, original_price=?, command=?, stock=?, is_featured=?, is_active=?, display_order=? WHERE id=?",
+            "UPDATE products SET server_id=?, category_id=?, name=?, description=?, image=?, price=?, original_price=?, command=?, stock=?, is_featured=?, is_active=?, one_per_user=?, display_order=? WHERE id=?",
             [
                 $_POST['server_id'],
                 $_POST['category_id'] ?: null,
@@ -48,10 +56,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 trim($_POST['image'] ?? ''),
                 (float)$_POST['price'],
                 $_POST['original_price'] ? (float)$_POST['original_price'] : null,
-                trim($_POST['command']),
+                $buildCommand(),
                 (int)$_POST['stock'],
                 isset($_POST['is_featured']) ? 1 : 0,
                 isset($_POST['is_active']) ? 1 : 0,
+                isset($_POST['one_per_user']) ? 1 : 0,
                 (int)($_POST['display_order'] ?? 0),
                 $id
             ]
@@ -79,24 +88,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Filters
-$filterServer = $_GET['server'] ?? '';
+$filterServer   = $_GET['server'] ?? '';
 $filterCategory = $_GET['category'] ?? '';
-$editId = (int)($_GET['edit'] ?? 0);
-$isCreate = isset($_GET['create']);
+$editId         = (int)($_GET['edit'] ?? 0);
+$isCreate       = isset($_GET['create']);
+
+// Pagination
+$perPage    = 20;
+$page       = max(1, (int)($_GET['page'] ?? 1));
 
 // Build query
-$where = [];
+$where  = [];
 $params = [];
-if ($filterServer) { $where[] = "p.server_id = ?"; $params[] = $filterServer; }
+if ($filterServer)   { $where[] = "p.server_id = ?";   $params[] = $filterServer; }
 if ($filterCategory) { $where[] = "p.category_id = ?"; $params[] = (int)$filterCategory; }
 $whereSQL = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
-$products = $db->fetchAll("SELECT p.*, s.name as server_name, c.name as category_name FROM products p LEFT JOIN servers s ON p.server_id = s.id LEFT JOIN categories c ON p.category_id = c.id {$whereSQL} ORDER BY p.server_id, p.display_order, p.id DESC", $params);
+$totalProducts = $db->count("SELECT COUNT(*) FROM products p {$whereSQL}", $params);
+$totalPages    = max(1, ceil($totalProducts / $perPage));
+$page          = min($page, $totalPages);
+$offset        = ($page - 1) * $perPage;
+
+$products = $db->fetchAll(
+    "SELECT p.*, s.name as server_name, c.name as category_name
+     FROM products p
+     LEFT JOIN servers s ON p.server_id = s.id
+     LEFT JOIN categories c ON p.category_id = c.id
+     {$whereSQL} ORDER BY p.server_id, p.display_order, p.id DESC
+     LIMIT {$perPage} OFFSET {$offset}",
+    $params
+);
 
 $editProduct = null;
 if ($editId) {
     $editProduct = $db->fetch("SELECT * FROM products WHERE id = ?", [$editId]);
 }
+
+// Build pagination query string (preserve filters)
+$paginationBase = '?'
+    . ($filterServer   ? 'server='   . urlencode($filterServer)   . '&' : '')
+    . ($filterCategory ? 'category=' . urlencode($filterCategory) . '&' : '');
 
 include BASE_PATH . '/layout/admin_header.php';
 ?>
@@ -106,7 +137,7 @@ include BASE_PATH . '/layout/admin_header.php';
     <div class="flex items-center justify-between mb-6">
         <div>
             <h1 class="text-2xl font-bold"><i class="fas fa-box mr-2" style="color: var(--color-primary);"></i>จัดการสินค้า</h1>
-            <p class="text-sm opacity-60 mt-1">สินค้าทั้งหมด <?= count($products) ?> รายการ</p>
+            <p class="text-sm opacity-60 mt-1">สินค้าทั้งหมด <?= $totalProducts ?> รายการ · หน้า <?= $page ?>/<?= $totalPages ?></p>
         </div>
         <div class="flex gap-2">
             <a href="<?= url('admin') ?>" class="text-sm opacity-60 hover:opacity-100 px-3 py-2"><i class="fas fa-arrow-left mr-1"></i> กลับ</a>
@@ -170,15 +201,50 @@ include BASE_PATH . '/layout/admin_header.php';
                     <input type="text" name="image" value="<?= e($editProduct['image'] ?? '') ?>" class="w-full px-3 py-2 rounded-lg border border-white/10 text-sm" style="background-color: var(--color-surface-dark);" placeholder="https://...">
                 </div>
                 <div class="md:col-span-2">
-                    <label class="block text-sm font-medium mb-1">คำสั่ง (Command) <span class="text-red-400">*</span></label>
-                    <input type="text" name="command" value="<?= e($editProduct['command'] ?? '') ?>" required class="w-full px-3 py-2 rounded-lg border border-white/10 text-sm font-mono" style="background-color: var(--color-surface-dark);" placeholder="give {player} diamond_sword 1">
-                    <p class="text-xs opacity-40 mt-1">ใช้ {player} แทนชื่อผู้เล่น, {amount} แทนจำนวน</p>
+                    <label class="block text-sm font-medium mb-2">คำสั่ง (Command) <span class="text-red-400">*</span></label>
+                    <?php
+                        $rawCmd  = $editProduct['command'] ?? '';
+                        $cmdList = json_decode($rawCmd, true);
+                        if (!is_array($cmdList)) $cmdList = $rawCmd !== '' ? [$rawCmd] : [''];
+                    ?>
+                    <div id="cmd-list" class="space-y-2">
+                        <?php foreach ($cmdList as $c): ?>
+                        <div class="cmd-row flex gap-2 items-center">
+                            <input type="text" name="commands[]" value="<?= e($c) ?>"
+                                   class="flex-1 px-3 py-2 rounded-lg border border-white/10 text-sm font-mono"
+                                   style="background-color: var(--color-surface-dark);"
+                                   placeholder="give {player} item 1">
+                            <button type="button" onclick="removeCmd(this)" class="px-2 py-2 rounded-lg text-red-400 hover:bg-red-400/10 transition text-sm" title="ลบ">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <button type="button" onclick="addCmd()" class="mt-2 px-3 py-1.5 rounded-lg border border-white/10 text-xs hover:bg-white/5 transition">
+                        <i class="fas fa-plus mr-1"></i> เพิ่มคำสั่ง
+                    </button>
+                    <p class="text-xs opacity-40 mt-2">ใช้ {player} แทนชื่อผู้เล่น · {amount} แทนจำนวน · หลายคำสั่ง = ชุดเซ็ต</p>
+                    <script>
+                    function addCmd() {
+                        const row = document.createElement('div');
+                        row.className = 'cmd-row flex gap-2 items-center';
+                        row.innerHTML = '<input type="text" name="commands[]" class="flex-1 px-3 py-2 rounded-lg border border-white/10 text-sm font-mono" style="background-color:var(--color-surface-dark);" placeholder="give {player} item 1">'
+                            + '<button type="button" onclick="removeCmd(this)" class="px-2 py-2 rounded-lg text-red-400 hover:bg-red-400/10 transition text-sm"><i class="fas fa-times"></i></button>';
+                        document.getElementById('cmd-list').appendChild(row);
+                        row.querySelector('input').focus();
+                    }
+                    function removeCmd(btn) {
+                        const rows = document.querySelectorAll('.cmd-row');
+                        if (rows.length <= 1) { btn.closest('.cmd-row').querySelector('input').value = ''; return; }
+                        btn.closest('.cmd-row').remove();
+                    }
+                    </script>
                 </div>
                 <div class="md:col-span-2">
                     <label class="block text-sm font-medium mb-1">คำอธิบาย</label>
                     <textarea name="description" rows="3" class="w-full px-3 py-2 rounded-lg border border-white/10 text-sm" style="background-color: var(--color-surface-dark);"><?= e($editProduct['description'] ?? '') ?></textarea>
                 </div>
-                <div class="flex items-center gap-6">
+                <div class="flex items-center gap-6 flex-wrap">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="is_active" value="1" <?= ($editProduct['is_active'] ?? 1) ? 'checked' : '' ?> class="rounded">
                         <span class="text-sm">เปิดใช้งาน</span>
@@ -186,6 +252,10 @@ include BASE_PATH . '/layout/admin_header.php';
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" name="is_featured" value="1" <?= ($editProduct['is_featured'] ?? 0) ? 'checked' : '' ?> class="rounded">
                         <span class="text-sm">สินค้าแนะนำ</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="one_per_user" value="1" <?= ($editProduct['one_per_user'] ?? 0) ? 'checked' : '' ?> class="rounded">
+                        <span class="text-sm">ห้ามซื้อซ้ำ <span class="opacity-50">(แรงค์/VIP)</span></span>
                     </label>
                 </div>
             </div>
@@ -295,6 +365,20 @@ include BASE_PATH . '/layout/admin_header.php';
                 </tbody>
             </table>
         </div>
+
+        <?php if ($totalPages > 1): ?>
+        <div class="flex justify-center gap-1 mt-4">
+            <?php if ($page > 1): ?>
+                <a href="<?= $paginationBase ?>page=<?= $page - 1 ?>" class="px-3 py-1 rounded text-sm opacity-60 hover:opacity-100">‹</a>
+            <?php endif; ?>
+            <?php for ($i = max(1, $page - 3); $i <= min($totalPages, $page + 3); $i++): ?>
+                <a href="<?= $paginationBase ?>page=<?= $i ?>" class="px-3 py-1 rounded text-sm <?= $i === $page ? 'font-bold' : 'opacity-60 hover:opacity-100' ?>" <?= $i === $page ? 'style="background-color:var(--color-primary);color:#fff;"' : '' ?>><?= $i ?></a>
+            <?php endfor; ?>
+            <?php if ($page < $totalPages): ?>
+                <a href="<?= $paginationBase ?>page=<?= $page + 1 ?>" class="px-3 py-1 rounded text-sm opacity-60 hover:opacity-100">›</a>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 

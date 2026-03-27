@@ -2,7 +2,7 @@
  * App.js — Global utilities
  */
 const App = {
-    baseUrl: document.querySelector('meta[name="base-url"]')?.content || '/mcstore',
+    baseUrl: document.querySelector('meta[name="base-url"]')?.content ?? '',
 
     async fetchJson(url, options = {}) {
         const defaults = {
@@ -58,30 +58,44 @@ const App = {
     }
 };
 
-// Add to cart function
-async function addToCart(productId, serverId, qty = 1) {
-    const res = await App.post('api/cart/add', { product_id: productId, server_id: serverId, quantity: qty });
-    if (res.success) {
-        App.toast(res.message || 'เพิ่มลงตะกร้าแล้ว!');
-        const cartEl = document.getElementById('cart-count');
-        if (cartEl && res.cart_count !== undefined) {
-            cartEl.textContent = res.cart_count;
-            cartEl.classList.remove('hidden');
-        }
-    } else {
-        App.toast(res.message || 'เกิดข้อผิดพลาด', 'error');
-    }
-}
+// Buy now — direct checkout (no cart)
+async function buyNow(productId, serverId, price, onePerUser = false) {
+    let qty = 1;
 
-// Remove from cart
-async function removeFromCart(itemId) {
-    const result = await App.confirm('ลบสินค้า?', 'ต้องการลบสินค้านี้ออกจากตะกร้า?');
-    if (result.isConfirmed) {
-        const res = await App.post('api/cart/remove', { item_id: itemId });
+    // ถ้าไม่ใช่ one_per_user ให้กรอกจำนวนก่อน
+    if (!onePerUser) {
+        const { value, isConfirmed } = await Swal.fire({
+            title: 'ระบุจำนวนที่ต้องการ',
+            input: 'number',
+            inputValue: 1,
+            inputAttributes: { min: 1, max: 99, step: 1 },
+            showCancelButton: true,
+            confirmButtonText: 'ถัดไป',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: 'var(--color-primary)',
+            inputValidator: (v) => (!v || v < 1) ? 'กรุณาระบุจำนวน' : null,
+        });
+        if (!isConfirmed) return;
+        qty = Math.max(1, parseInt(value) || 1);
+    }
+
+    const total = new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 }).format(price * qty);
+    const { isConfirmed } = await App.confirm(
+        'ยืนยันการซื้อ',
+        `จำนวน ${qty} ชิ้น — รวม ${total} ฿`,
+        'question'
+    );
+    if (!isConfirmed) return;
+
+    try {
+        const res = await App.post('api/shop/buynow', { product_id: productId, server_id: serverId, quantity: qty });
         if (res.success) {
-            location.reload();
+            App.toast(res.message || 'ซื้อสำเร็จ!');
+            setTimeout(() => { location.href = res.redirect || '/orders'; }, 1500);
         } else {
             App.toast(res.message || 'เกิดข้อผิดพลาด', 'error');
         }
+    } catch (e) {
+        App.toast('เกิดข้อผิดพลาด กรุณาลองใหม่', 'error');
     }
 }

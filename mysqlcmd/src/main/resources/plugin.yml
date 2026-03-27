@@ -1,0 +1,37 @@
+# ชื่อของปลั๊กอิน (จะไปแสดงในโฟลเดอร์ plugins และตอนพิมพ์ /plugins)
+name: Mysqlcmd
+
+# เวอร์ชันของปลั๊กอิน (อัปเดตเป็น 3.0 สำหรับระบบ Multi-Server Sync และ Reload)
+version: '4.0'
+
+# ตำแหน่งของคลาสหลัก (ต้องตรงกับชื่อ Package และชื่อ Class ในไฟล์ Java ของคุณเป๊ะๆ)
+main: org.example.me.mysqlcmd.Mysqlcmd
+
+# เวอร์ชัน API ของมายคราฟที่รองรับ (ใส่ 1.13 จะทำให้รองรับตั้งแต่ 1.13 จนถึงเวอร์ชันล่าสุด)
+api-version: '1.13'
+
+# คำอธิบายปลั๊กอินสั้นๆ
+description: 'ปลั๊กอินรับคำสั่งจาก Webshop ผ่านฐานข้อมูล MySQL (Multi-server Sync, Security V3, รองรับการเช็คออนไลน์)'
+
+# ชื่อผู้พัฒนา
+author: 'NTHNCH'
+
+# ==========================================
+# ลงทะเบียนคำสั่งที่ใช้ในปลั๊กอิน
+# ==========================================
+commands:
+  mysqlcmd:
+    description: MCStore Plugin — จัดการระบบส่งของจาก Webshop
+    permission: mysqlcmd.admin
+    usage: |
+      /<command> reload — โหลด config ใหม่
+      /<command> status — แสดงสถานะปัจจุบัน
+      /<command> poll   — poll คำสั่งทันที
+
+# ==========================================
+# ลงทะเบียนสิทธิ์ (Permissions)
+# ==========================================
+permissions:
+  mysqlcmd.admin:
+    description: อนุญาตให้ใช้คำสั่งของปลั๊กอิน Mysqlcmd (เช่นการ reload config)
+    default: op

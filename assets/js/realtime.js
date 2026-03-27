@@ -2,7 +2,7 @@
  * Real-time polling — Fetch API every 3 seconds
  */
 (function() {
-    const BASE_URL = document.querySelector('meta[name="base-url"]')?.content || '/mcstore';
+    const BASE_URL = document.querySelector('meta[name="base-url"]')?.content ?? '';
 
     async function poll() {
         try {

@@ -19,8 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $product = $db->fetch("SELECT * FROM products p WHERE p.id = ? AND p.is_active = 1", [$item['product_id']]);
         if (!$product) continue;
         
-        // Check stock
-        if ($product['stock'] !== null && $product['stock'] < $item['quantity']) {
+        // Check stock (-1 = unlimited)
+        if ($product['stock'] >= 0 && $product['stock'] < $item['quantity']) {
             flash('error', "สินค้า \"{$product['name']}\" มีไม่เพียงพอ");
             redirect('cart');
         }
@@ -62,8 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 [$orderId, $oi['product']['id'], $oi['server_id'], $oi['product']['name'], $oi['quantity'], $oi['price'], $oi['product']['command']]
             );
             
-            // Reduce stock
-            if ($oi['product']['stock'] !== null) {
+            // Reduce stock (-1 = unlimited, skip)
+            if ($oi['product']['stock'] >= 0) {
                 $db->execute("UPDATE products SET stock = stock - ? WHERE id = ?", [$oi['quantity'], $oi['product']['id']]);
             }
             

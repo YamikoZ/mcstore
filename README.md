@@ -1,224 +1,208 @@
-# MCStore
+# MCStore — Minecraft Webshop
 
-ระบบเว็บไซต์ร้านค้า Minecraft สำหรับรับชำระเงิน ออเดอร์สินค้า และจัดการผู้เล่น
-พัฒนาด้วย PHP + MySQL รองรับทั้ง shared hosting และ VPS
-
----
-
-## ✨ ฟีเจอร์หลัก
-
-### 🛒 Shop — ร้านค้าไอเทม
-- ขายสินค้า/ไอเทมในเกม แยกตามเซิร์ฟเวอร์และหมวดหมู่
-- ระบบตะกร้าสินค้า เพิ่ม/ลบ/เช็คสต็อก
-- Checkout จ่ายด้วยเงินในระบบ (Wallet)
-- ส่งคำสั่งไปยัง Minecraft Server อัตโนมัติผ่าน Plugin
-
-### 🎰 Gacha — กล่องสุ่มรางวัล
-- สุ่มรางวัลแบบ weighted probability
-- กำหนดรางวัลและเรต drop ได้เอง
-- แสดงประวัติการสุ่มย้อนหลัง
-
-### 💰 Topup — เติมเงินเข้าระบบ
-- รองรับ **ซองอั่งเปา TrueWallet** (อัตโนมัติ)
-- เครดิตเข้า Wallet ทันทีหลังเติม
-- ประวัติการเติมเงินครบถ้วน
-
-### 🎫 Redeem Code — แลกโค้ด
-- สร้างโค้ดแจกลูกค้า กำหนดมูลค่าและจำนวนครั้งใช้ได้
-- แลกโค้ดรับเงินเข้า Wallet หรือสินค้าโดยตรง
-
-### 👤 ระบบสมาชิก
-- รองรับ **AuthMe / nLogin** (ใช้ตาราง plugin โดยตรง)
-- รองรับ **Standalone** (ระบบ login ของ MCStore เอง)
-- โปรไฟล์ผู้ใช้: แก้ไขข้อมูล, เปลี่ยนรหัสผ่าน, ประวัติออเดอร์
-- ระบบ Wallet (ยอดเงินในระบบ)
-- ระบบแจ้งเตือน (Notifications)
-
-### 🔧 Admin Panel — จัดการทุกอย่างในที่เดียว
-- **Dashboard** — สถิติยอดขาย, ออเดอร์, ผู้ใช้ วันนี้/รวม
-- **สินค้า** — เพิ่ม/แก้ไข/ลบสินค้า, จัดการสต็อก, หมวดหมู่
-- **เซิร์ฟเวอร์** — จัดการ Minecraft Server หลายตัวพร้อมกัน
-- **กาชา** — ออกแบบกล่องสุ่ม กำหนดรางวัลและเรต
-- **รีดีมโค้ด** — สร้างและจัดการโค้ดแลก
-- **ออเดอร์** — ดูและจัดการออเดอร์ทั้งหมด, ส่งสินค้าซ้ำ
-- **เติมเงิน** — ตรวจสอบการเติมเงิน, อนุมัติ manual
-- **ผู้ใช้** — จัดการสมาชิก, แบน/ปลดแบน, เติม/ตัดเงิน
-- **แบนเนอร์** — จัดการ slideshow หน้าแรก
-- **หน้าเพจ** — สร้างหน้า static (เกี่ยวกับเรา, FAQ ฯลฯ)
-- **ช่องทางจ่าย** — ตั้งค่า payment gateway
-- **ข้อความ** — รับ/ตอบข้อความติดต่อจากลูกค้า
-- **ตั้งค่า** — ปรับทุกอย่างผ่าน UI ไม่ต้องแก้โค้ด
-- **License** — จัดการ License Key
+ระบบร้านค้าออนไลน์สำหรับ Minecraft Server
+รองรับ **ซื้อสินค้า → ส่งคำสั่งเข้า Server อัตโนมัติ** ผ่าน HTTP API
 
 ---
 
-## 📋 ความต้องการ
+## สิ่งที่ต้องมี
 
-| รายการ | เวอร์ชัน |
-|--------|---------|
-| PHP | 8.0+ |
-| MySQL | 5.7+ |
-| Apache | 2.4+ (mod_rewrite) |
-| XAMPP / Laragon | หรือ web server อื่นๆ |
+| Component | รายละเอียด |
+|-----------|-----------|
+| PHP | 8.0+ พร้อม `mysqli`, `json`, `mbstring` |
+| MySQL / MariaDB | 5.7+ |
+| Web Server | Apache (XAMPP) หรือ Nginx |
+| Minecraft Server | Spigot / Paper 1.13–1.21 |
+| Java | 17+ (สำหรับ build plugin เอง) |
 
 ---
 
-## ⚡ ติดตั้ง
-
-### 1. โหลดไฟล์
+## ติดตั้ง Web
 
 ```bash
-git clone https://github.com/YamikoZ/mcstore.git
-cd mcstore
+# 1. วางโฟลเดอร์ใน htdocs (หรือ web root)
+# 2. Import ฐานข้อมูล
+mysql -u root -p mcstore < mcstore.sql
+
+# 3. คัดลอก config ตัวอย่าง
+cp config/database.example.php config/database.php
+
+# 4. แก้ไข config/database.php ให้ตรงกับ server
 ```
-
-### 2. สร้างไฟล์ Config
-
-```bash
-# Database
-copy config\database.example.php config\database.php
-
-# License
-copy config\license.example.php config\license.php
-```
-
-แก้ไข `config/database.php` ให้ตรงกับ database ของคุณ:
 
 ```php
 return [
     'host'     => '127.0.0.1',
-    'port'     => 3306,
     'database' => 'mcstore',
     'username' => 'root',
-    'password' => '',
-    'charset'  => 'utf8mb4',
+    'password' => 'your_password',
 ];
 ```
 
-### 3. Import Database
-
-นำเข้าไฟล์ `mcstore.sql` ผ่าน phpMyAdmin หรือ:
-
 ```bash
-mysql -u root -p mcstore < mcstore.sql
-```
-
-### 4. ใส่ License Key
-
-เปิดเว็บ → จะเห็นหน้า **ใส่ License Key** → กรอก key ที่ได้รับแล้วกด ยืนยัน
-
----
-
-## 🔑 License
-
-ระบบนี้ต้องมี **License Key** เพื่อใช้งาน
-
-### ราคา
-
-| แพ็กเกจ | ราคา | หมายเหตุ |
-|---------|------|---------|
-| License Key (ถาวร) | **350 บาท** | 1 key ต่อ 1 domain |
-| ย้าย Domain | **150 บาท**/ครั้ง | รีเซ็ต key ไปผูก domain ใหม่ |
-
-- Key จะถูกผูกกับ domain ของคุณโดยอัตโนมัติเมื่อใช้ครั้งแรก
-- ย้าย domain ต้องแจ้งผู้พัฒนาเพื่อรีเซ็ต (150 บาท/ครั้ง)
-
-### ขอรับ License
-
-เปิด Issue ได้ที่ → **[GitHub Issues](https://github.com/YamikoZ/mcstore/issues/new?title=ขอ%20License%20Key&body=**Domain:**%20%60yourdomain.com%60%0A%0A**ชื่อเว็บ%20/%20ร้านค้า:**%0A%0A**ช่องทางติดต่อ:**&labels=license)**
-
----
-
-## 🔗 เชื่อมกับ TrueWallet (ระบบอั่งเปา)
-
-ต้องติดตั้ง **[truewallet-api](https://github.com/YamikoZ/truewallet-api)** บน Linux server แยกต่างหาก แล้วตั้งค่าใน Admin → Settings:
-
-| Key | ค่า |
-|-----|-----|
-| `tw_proxy_url` | URL ของ truewallet-api เช่น `http://103.x.x.x` |
-| `tw_proxy_key` | API Key ที่ตั้งตอนติดตั้ง |
-
----
-
-## 🔌 เชื่อมกับ Minecraft Plugin
-
-ตั้งค่าใน Admin → Settings → Plugin:
-
-| Key | คำอธิบาย |
-|-----|---------|
-| `plugin_api_secret` | Secret key สำหรับ plugin ยืนยันตัวตน |
-
-Plugin endpoint:
-```
-GET  /api/plugin/pending   — ดึงรายการคำสั่งที่รอส่ง
-POST /api/plugin/callback  — แจ้งผลการส่งคำสั่ง
+# 5. เข้า Admin แรก → สร้าง account แล้วเปลี่ยน role เป็น admin ใน DB
+UPDATE users SET role = 'admin' WHERE username = 'yourname';
 ```
 
 ---
 
-## 🔐 Auth Mode
+## ติดตั้ง Plugin
 
-รองรับ 2 โหมดใน `config/auth.php`:
+### ดาวน์โหลด
+ดาวน์โหลดไฟล์ **[MCStore-Plugin-4.0.jar](releases/MCStore-Plugin-4.0.jar)** จากโฟลเดอร์ `releases/`
 
-| โหมด | คำอธิบาย |
-|------|---------|
-| `plugin` | ใช้ตาราง AuthMe / nLogin จาก MySQL |
-| `standalone` | ระบบสมาชิกของ MCStore เอง |
+### วางไฟล์
+```
+server/
+└── plugins/
+    └── MCStore-Plugin-4.0.jar   ← วางไว้ที่นี่
+```
+
+### ตั้งค่า `plugins/Mysqlcmd/config.yml`
+```yaml
+api:
+  url: "https://yoursite.com"      # URL เว็บ MCStore (ไม่ต้องใส่ / ท้าย)
+  server_id: "survival"            # ต้องตรงกับ servers.id ใน Database
+  secret: "YOUR_PLUGIN_API_SECRET" # ตั้งค่าใน Admin → Settings → Plugin
+
+settings:
+  polling_interval_ticks: 600      # 600 ticks = 30 วินาที
+  max_commands_per_cycle: 20
+
+allowed_commands:
+  - "give"
+  - "lp"
+  - "eco"
+  - "rank"
+  - "booster"
+  - "crate"
+  # เพิ่มคำสั่งที่อนุญาตได้ที่นี่
+```
+
+> **Plugin API Secret** — ตั้งค่าที่ `Admin → Settings → Plugin API Secret`
+> Plugin จะ poll API ทุก 30 วินาที และส่งคำสั่งเข้า server อัตโนมัติ
+
+### คำสั่ง In-Game
+| คำสั่ง | คำอธิบาย |
+|--------|---------|
+| `/mysqlcmd reload` | โหลด config ใหม่โดยไม่ต้อง restart server |
+| `/mysqlcmd status` | แสดงสถานะ API, สถิติการส่งของ |
+| `/mysqlcmd poll` | สั่ง poll ทันทีโดยไม่ต้องรอ 30 วินาที |
+
+**Permission:** `mysqlcmd.admin` (default: op)
 
 ---
 
-## 📁 โครงสร้างไฟล์
+## ฟีเจอร์หลัก
+
+### ร้านค้า
+- ซื้อสินค้าแบบ **Buy Now** (1 คลิก) พร้อมระบุจำนวน
+- รองรับ **Set Items** — ชุดเกราะ/ของหลายชิ้นในคลิกเดียว (JSON array commands)
+- ป้องกันซื้อซ้ำสำหรับสินค้าประเภทยศ/VIP (`one_per_user`)
+- จัดการ stock (unlimited = -1, มี stock = ตัวเลข)
+- Pagination ‹ 1 2 3 › พร้อม preserve filter
+
+### ระบบ Gacha
+- Weighted Random พร้อม 5 ระดับความหายาก: Common / Uncommon / Rare / Epic / Legendary
+- ประวัติการหมุนพร้อม rarity glow border
+- Pagination
+
+### การชำระเงิน
+- ระบบ Wallet (เติมเงิน → ใช้ซื้อสินค้า)
+- รองรับสลิปโอนเงิน (อัปโหลดรูป + ยืนยันโดย Admin)
+
+### Plugin ↔ Web (HTTP API)
+- Plugin **ไม่ต้องเชื่อมต่อ DB โดยตรง** — ปลอดภัยกว่า
+- HMAC-SHA256 Authentication ทุก request
+- Console banner + สถิติ ✔/✘ per delivery
+- Callback รายงานผลส่ง command กลับเว็บ
+
+### Profile
+- ภาพรวมสถิติ + Minecraft body skin
+- ประวัติออเดอร์, กระเป๋าเงิน, กาชา, การส่งของ
+- แจ้งเตือน, แก้ไขโปรไฟล์, เปลี่ยนรหัสผ่านพร้อม strength bar
+
+### Admin Panel
+- จัดการสินค้า, หมวดหมู่, เซิร์ฟเวอร์
+- Command Builder (เพิ่มทีละบรรทัด / Set Items)
+- ระบบ Redeem Code
+- Delivery Queue Monitor
+- Pagination ทุกหน้า
+
+---
+
+## โครงสร้างโปรเจกต์
 
 ```
 mcstore/
-├── index.php              ← Front controller / Router
-├── mcstore.sql            ← Database schema
-├── config/
-│   ├── database.php       ← DB config (ไม่ขึ้น git)
-│   ├── license.php        ← License config (ไม่ขึ้น git)
-│   └── auth.php           ← Auth mode config
-├── classes/               ← Core classes (Database, Auth, Settings...)
-├── admin/                 ← Admin panel pages
-├── api/                   ← JSON API endpoints
-├── pages/                 ← Frontend pages
-├── layout/                ← Header / Footer templates
-└── assets/                ← CSS, JS
+├── api/
+│   ├── plugin/          # Plugin polling & callback endpoints
+│   └── shop/            # Buy Now API
+├── admin/               # Admin panel pages
+├── assets/
+│   ├── css/theme.php    # Dynamic CSS themes
+│   └── js/app.js        # Frontend JS (buyNow, SweetAlert2)
+├── classes/             # Core classes (Auth, Database, Helpers...)
+├── config/              # DB + License config (gitignored)
+├── layout/              # Header/Footer templates
+├── pages/               # Frontend pages
+│   └── profile/         # Profile sub-pages
+├── releases/
+│   └── MCStore-Plugin-4.0.jar   ← Plugin พร้อมใช้งาน
+├── mysqlcmd/            # Plugin source code (Maven / Java 17)
+│   ├── src/
+│   └── pom.xml
+└── mcstore.sql          # Database schema + initial data
 ```
 
 ---
 
-## 🔄 อัปเดต
-
-เมื่อมีการอัปเดตใหม่ใน GitHub ให้รันคำสั่งนี้ในโฟลเดอร์ที่ติดตั้ง MCStore:
+## Build Plugin จาก Source
 
 ```bash
-git pull
+cd mysqlcmd
+set JAVA_HOME=C:/Program Files/Java/jdk-21
+mvn clean package -q
+# Output: target/MCStore-Plugin-4.0.jar
 ```
-
-### สิ่งที่อัปเดตโดยอัตโนมัติ
-- ไฟล์ PHP ทั้งหมด (หน้าเว็บ, คลาส, API, Admin)
-- ไฟล์ CSS / JS / Assets
-- Bug fix และ Security patch
-
-### สิ่งที่ **ไม่** ถูกแตะต้อง (ปลอดภัย)
-- `config/database.php` — การตั้งค่าฐานข้อมูล
-- `config/license.php` — License config
-- `config/auth.php` — Auth mode
-- `uploads/` — รูปภาพที่อัปโหลด
-
-### หากมีการอัปเดต Database Schema
-
-ผู้พัฒนาจะแจ้งใน release notes หาก version ใหม่มีการเปลี่ยน schema ให้รัน SQL เพิ่มเติมที่แนบมาด้วย
-
-### ติดตามการอัปเดต
-
-- Watch repo นี้บน GitHub (⭐ Star → Watch → All Activity)
-- หรือเช็ค [Releases](https://github.com/YamikoZ/mcstore/releases) เป็นระยะ
 
 ---
 
-## 📝 หมายเหตุ
+## Security
 
-- `config/database.php` และ `config/license.php` ไม่รวมใน repo ต้องสร้างเองจาก `.example.php`
-- หลัง `git pull` ไม่ต้องทำอะไรเพิ่ม config ไฟล์จะยังอยู่ครบ
-- เปลี่ยนชื่อโฟลเดอร์ได้ตามต้องการ ไม่มีอะไรผูกกับชื่อ `mcstore`
+- CSRF Token ทุก form และ AJAX request (`X-CSRF-TOKEN` header)
+- HMAC-SHA256 signature ระหว่าง Plugin ↔ API (ป้องกัน replay attack)
+- Command Whitelist — plugin รันเฉพาะคำสั่งที่ระบุใน `allowed_commands`
+- `execute` / `run` ถูกบล็อกอัตโนมัติเสมอ
+- Rate limiting บน API endpoints
+- Prepared statements ทุก query (ป้องกัน SQL Injection)
+- `config/database.php` อยู่ใน `.gitignore`
+
+---
+
+## อัปเดตโปรเจกต์
+
+```bash
+git pull origin main
+```
+
+> ไฟล์ที่ไม่ถูกแตะต้อง: `config/database.php`, `config/license.php`, `uploads/`
+
+---
+
+## Changelog
+
+### v4.0 (ล่าสุด)
+- เปลี่ยน Plugin จาก Direct MySQL → HTTP API (ปลอดภัยกว่า)
+- เพิ่ม HMAC-SHA256 Authentication
+- ระบบ Buy Now แทน Cart
+- รองรับ Set Items (JSON array commands)
+- ป้องกันซื้อซ้ำ (one_per_user)
+- รองรับ Minecraft 1.21 item component format
+- Pagination ทุกหน้า (frontend + admin)
+- Profile redesign — sidebar + hero card + rarity glow
+- เหลือเซิร์ฟเวอร์ Survival เดียว
+
+---
+
+**Developer:** NTHNCH | Private — ห้ามนำไปขายต่อโดยไม่ได้รับอนุญาต

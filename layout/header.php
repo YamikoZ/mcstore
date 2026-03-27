@@ -32,6 +32,8 @@ if ($feat['contact'])  $navItems[] = ['url' => 'contact',  'icon' => 'fa-envelop
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= isset($pageTitle) ? e($pageTitle) . ' — ' . $siteName : $siteName ?></title>
     <meta name="description" content="<?= e(Settings::get('site_description', '')) ?>">
+    <meta name="base-url" content="<?= rtrim(BASE_URL, '/') ?>">
+    <meta name="csrf-token" content="<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES) ?>">
     <?php if ($favicon = Settings::get('site_favicon')): ?>
         <link rel="icon" href="<?= e($favicon) ?>">
     <?php endif; ?>
@@ -102,12 +104,6 @@ if ($feat['contact'])  $navItems[] = ['url' => 'contact',  'icon' => 'fa-envelop
                 <!-- Right Side -->
                 <div class="flex items-center space-x-4">
                     <?php if ($currentUser): ?>
-                        <!-- Cart -->
-                        <a href="<?= url('cart') ?>" class="relative nav-link transition">
-                            <i class="fas fa-shopping-cart text-lg"></i>
-                            <span id="cart-count" class="absolute -top-2 -right-2 badge-count text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
-                        </a>
-
                         <!-- Notifications -->
                         <a href="<?= url('profile/notifications') ?>" class="relative nav-link transition">
                             <i class="fas fa-bell text-lg"></i>

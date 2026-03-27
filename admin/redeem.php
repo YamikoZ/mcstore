@@ -66,7 +66,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$codes = $db->fetchAll("SELECT rc.*, (SELECT COUNT(*) FROM redeem_usage WHERE code_id = rc.id) as actual_uses FROM redeem_codes rc ORDER BY rc.created_at DESC LIMIT 100");
+$perPage     = 20;
+$page        = max(1, (int)($_GET['page'] ?? 1));
+$totalCodes  = $db->count("SELECT COUNT(*) FROM redeem_codes");
+$totalPages  = max(1, ceil($totalCodes / $perPage));
+$page        = min($page, $totalPages);
+$offset      = ($page - 1) * $perPage;
+$codes = $db->fetchAll("SELECT rc.*, (SELECT COUNT(*) FROM redeem_usage WHERE code_id = rc.id) as actual_uses FROM redeem_codes rc ORDER BY rc.created_at DESC LIMIT {$perPage} OFFSET {$offset}");
 
 $editId = (int)($_GET['edit'] ?? 0);
 $editCode = $editId ? $db->fetch("SELECT * FROM redeem_codes WHERE id = ?", [$editId]) : null;
@@ -80,7 +86,7 @@ include BASE_PATH . '/layout/admin_header.php';
     <div class="flex items-center justify-between mb-6">
         <div>
             <h1 class="text-2xl font-bold"><i class="fas fa-gift mr-2" style="color: var(--color-accent);"></i>จัดการรีดีมโค้ด</h1>
-            <p class="text-sm opacity-60 mt-1"><?= count($codes) ?> โค้ด (แสดง 100 ล่าสุด)</p>
+            <p class="text-sm opacity-60 mt-1">โค้ดทั้งหมด <?= $totalCodes ?> รายการ · หน้า <?= $page ?>/<?= $totalPages ?></p>
         </div>
         <div class="flex gap-2">
             <a href="<?= url('admin') ?>" class="text-sm opacity-60 hover:opacity-100 px-3 py-2"><i class="fas fa-arrow-left mr-1"></i> กลับ</a>
@@ -235,6 +241,20 @@ include BASE_PATH . '/layout/admin_header.php';
                 </tbody>
             </table>
         </div>
+
+        <?php if ($totalPages > 1): ?>
+        <div class="flex justify-center gap-1 mt-4">
+            <?php if ($page > 1): ?>
+                <a href="?page=<?= $page - 1 ?>" class="px-3 py-1 rounded text-sm opacity-60 hover:opacity-100">‹</a>
+            <?php endif; ?>
+            <?php for ($i = max(1, $page - 3); $i <= min($totalPages, $page + 3); $i++): ?>
+                <a href="?page=<?= $i ?>" class="px-3 py-1 rounded text-sm <?= $i === $page ? 'font-bold' : 'opacity-60 hover:opacity-100' ?>" <?= $i === $page ? 'style="background-color:var(--color-primary);color:#fff;"' : '' ?>><?= $i ?></a>
+            <?php endfor; ?>
+            <?php if ($page < $totalPages): ?>
+                <a href="?page=<?= $page + 1 ?>" class="px-3 py-1 rounded text-sm opacity-60 hover:opacity-100">›</a>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 

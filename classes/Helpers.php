@@ -126,3 +126,47 @@ function createNotification($userIdentifier, $title, $message, $type = 'info', $
         [$username, $title, $message, $type, $link]
     );
 }
+
+/**
+ * Render ‹ 1 2 3 › pagination HTML
+ * @param int $currentPage  current page (1-based)
+ * @param int $totalPages   total number of pages
+ * @param string $baseUrl   URL without ?page= (query params already included)
+ * @param string $pageParam query param name, default 'page'
+ */
+function paginationHtml(int $currentPage, int $totalPages, string $baseUrl, string $pageParam = 'page'): string {
+    if ($totalPages <= 1) return '';
+
+    $sep = str_contains($baseUrl, '?') ? '&' : '?';
+    $html  = '<div class="flex items-center justify-center gap-1 mt-8">';
+
+    // Prev
+    if ($currentPage > 1) {
+        $html .= '<a href="' . $baseUrl . $sep . $pageParam . '=' . ($currentPage - 1) . '" class="px-3 py-1 rounded text-sm opacity-70 hover:opacity-100" style="background:var(--color-surface-dark);">‹</a>';
+    }
+
+    // Page numbers (show up to 5 around current)
+    $start = max(1, $currentPage - 2);
+    $end   = min($totalPages, $currentPage + 2);
+    if ($start > 1) {
+        $html .= '<a href="' . $baseUrl . $sep . $pageParam . '=1" class="px-3 py-1 rounded text-sm opacity-70 hover:opacity-100" style="background:var(--color-surface-dark);">1</a>';
+        if ($start > 2) $html .= '<span class="px-2 opacity-30">…</span>';
+    }
+    for ($i = $start; $i <= $end; $i++) {
+        $active = $i === $currentPage;
+        $style  = $active ? 'background:var(--color-primary);color:#fff;' : 'background:var(--color-surface-dark);';
+        $html  .= '<a href="' . $baseUrl . $sep . $pageParam . '=' . $i . '" class="px-3 py-1 rounded text-sm font-semibold" style="' . $style . '">' . $i . '</a>';
+    }
+    if ($end < $totalPages) {
+        if ($end < $totalPages - 1) $html .= '<span class="px-2 opacity-30">…</span>';
+        $html .= '<a href="' . $baseUrl . $sep . $pageParam . '=' . $totalPages . '" class="px-3 py-1 rounded text-sm opacity-70 hover:opacity-100" style="background:var(--color-surface-dark);">' . $totalPages . '</a>';
+    }
+
+    // Next
+    if ($currentPage < $totalPages) {
+        $html .= '<a href="' . $baseUrl . $sep . $pageParam . '=' . ($currentPage + 1) . '" class="px-3 py-1 rounded text-sm opacity-70 hover:opacity-100" style="background:var(--color-surface-dark);">›</a>';
+    }
+
+    $html .= '</div>';
+    return $html;
+}

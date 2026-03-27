@@ -31,6 +31,10 @@ $categories = $db->fetchAll(
     [$currentServer['id']]
 );
 
+// Pagination
+$perPage = 12;
+$page    = max(1, (int)($_GET['page'] ?? 1));
+
 // Get products
 $params = [$currentServer['id']];
 $catFilter = "";
@@ -42,12 +46,23 @@ if ($categorySlug) {
     }
 }
 
-$products = $db->fetchAll(
-    "SELECT p.*, c.name AS category_name FROM products p 
-     JOIN categories c ON p.category_id = c.id 
-     WHERE p.server_id = ? AND p.is_active = 1{$catFilter}
-     ORDER BY p.display_order, p.created_at DESC",
+$totalProducts = (int)$db->fetch(
+    "SELECT COUNT(*) AS n FROM products p
+     WHERE p.server_id = ? AND p.is_active = 1{$catFilter}",
     $params
+)['n'];
+$totalPages = max(1, (int)ceil($totalProducts / $perPage));
+$page       = min($page, $totalPages);
+$offset     = ($page - 1) * $perPage;
+
+$paramsPage = array_merge($params, [$perPage, $offset]);
+$products = $db->fetchAll(
+    "SELECT p.*, c.name AS category_name FROM products p
+     JOIN categories c ON p.category_id = c.id
+     WHERE p.server_id = ? AND p.is_active = 1{$catFilter}
+     ORDER BY p.display_order, p.created_at DESC
+     LIMIT ? OFFSET ?",
+    $paramsPage
 );
 
 include BASE_PATH . '/layout/header.php';
@@ -98,7 +113,7 @@ include BASE_PATH . '/layout/header.php';
                     <i class="fas fa-store mr-2" style="color: var(--color-primary);"></i>
                     ร้านค้า — <?= e($currentServer['name']) ?>
                 </h1>
-                <span class="text-sm opacity-60"><?= count($products) ?> สินค้า</span>
+                <span class="text-sm opacity-60"><?= $totalProducts ?> สินค้า</span>
             </div>
 
             <?php if (empty($products)): ?>
@@ -132,9 +147,9 @@ include BASE_PATH . '/layout/header.php';
                                         <span class="text-lg font-bold" style="color: var(--color-accent);"><?= formatMoney($prod['price']) ?></span>
                                     </div>
                                     <?php if (Auth::check()): ?>
-                                        <button onclick="addToCart(<?= (int)$prod['id'] ?>, <?= (int)$currentServer['id'] ?>)" 
+                                        <button onclick="buyNow(<?= (int)$prod['id'] ?>, '<?= e($currentServer['id']) ?>', <?= (float)$prod['price'] ?>, <?= $prod['one_per_user'] ? 'true' : 'false' ?>)"
                                                 class="btn-primary px-4 py-2 rounded-lg text-sm font-semibold">
-                                            <i class="fas fa-cart-plus mr-1"></i> ซื้อ
+                                            <i class="fas fa-bolt mr-1"></i> ซื้อเลย
                                         </button>
                                     <?php else: ?>
                                         <a href="<?= url('login') ?>" class="btn-primary px-4 py-2 rounded-lg text-sm font-semibold">
@@ -153,6 +168,11 @@ include BASE_PATH . '/layout/header.php';
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
+
+            <?php
+            $shopBase = url('shop/' . e($serverSlug) . ($categorySlug ? '/' . e($categorySlug) : ''));
+            echo paginationHtml($page, $totalPages, $shopBase);
+            ?>
         </div>
     </div>
 </div>
