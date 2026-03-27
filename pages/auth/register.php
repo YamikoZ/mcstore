@@ -27,9 +27,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'อีเมลไม่ถูกต้อง';
     }
     
-    // Check existing user
-    if (empty($errors) && Auth::findByUsername($username)) {
-        $errors[] = 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว';
+    // Check existing user (ทั้ง authme และ users table)
+    if (empty($errors)) {
+        $db = Database::getInstance();
+        if (Auth::findByUsername($username) ||
+            $db->fetch("SELECT id FROM users WHERE LOWER(username) = LOWER(?)", [$username])) {
+            $errors[] = 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว';
+        }
     }
     
     if (!rateLimitCheck('register', 3, 600)) {
