@@ -1,99 +1,60 @@
 @echo off
-chcp 65001 >nul
 echo.
 echo ================================================
-echo   MCStore — XAMPP Auto Setup
+echo   MCStore - XAMPP Auto Setup
 echo ================================================
 echo.
 
-:: หา XAMPP จาก script location
-set SCRIPT_DIR=%~dp0
-:: ขึ้นไป 2 ระดับ (mcstore → htdocs → xampp)
-for %%A in ("%SCRIPT_DIR%..\..") do set XAMPP_DIR=%%~fA
+set XAMPP_DIR=C:\xampp
 set APACHE_CONF=%XAMPP_DIR%\apache\conf\httpd.conf
 set VHOSTS_CONF=%XAMPP_DIR%\apache\conf\extra\httpd-vhosts.conf
-set HTDOCS=%XAMPP_DIR%\htdocs
-set MCSTORE_PATH=%XAMPP_DIR%\htdocs\mcstore
+set MCSTORE_PATH=%XAMPP_DIR%\htdocs
 
-echo [1/4] ตรวจสอบ XAMPP...
+echo [1/3] Checking XAMPP...
 if not exist "%APACHE_CONF%" (
-    echo ERROR: ไม่พบ XAMPP ที่ %XAMPP_DIR%
-    echo กรุณาวางโฟลเดอร์ mcstore ไว้ใน C:\xampp\htdocs\
+    echo ERROR: XAMPP not found at %XAMPP_DIR%
     pause & exit /b 1
 )
-echo       พบ XAMPP ที่ %XAMPP_DIR%
+echo       Found XAMPP at %XAMPP_DIR%
 
-:: ─────────────────────────────────────────────
-:: [2] Enable mod_rewrite ใน httpd.conf
-:: ─────────────────────────────────────────────
-echo [2/4] เปิดใช้ mod_rewrite...
-findstr /C:"LoadModule rewrite_module" "%APACHE_CONF%" | findstr /V "#" >nul 2>&1
+echo [2/3] Enabling mod_rewrite...
+powershell -Command "(Get-Content '%APACHE_CONF%') -replace '#LoadModule rewrite_module','LoadModule rewrite_module' | Set-Content '%APACHE_CONF%'"
+echo       mod_rewrite enabled
+
+echo [3/3] Enabling Virtual Hosts...
+powershell -Command "(Get-Content '%APACHE_CONF%') -replace '#Include conf/extra/httpd-vhosts.conf','Include conf/extra/httpd-vhosts.conf' | Set-Content '%APACHE_CONF%'"
+echo       Virtual Hosts enabled
+
+echo.
+echo Checking VirtualHost config...
+findstr /C:"mcstore" "%VHOSTS_CONF%" >nul 2>&1
 if errorlevel 1 (
-    powershell -Command "(Get-Content '%APACHE_CONF%') -replace '#LoadModule rewrite_module','LoadModule rewrite_module' | Set-Content '%APACHE_CONF%'"
-    echo       เปิด mod_rewrite แล้ว
-) else (
-    echo       mod_rewrite เปิดอยู่แล้ว
-)
-
-:: ─────────────────────────────────────────────
-:: [3] Enable httpd-vhosts.conf ใน httpd.conf
-:: ─────────────────────────────────────────────
-echo [3/4] เปิดใช้ Virtual Hosts...
-findstr /C:"Include conf/extra/httpd-vhosts.conf" "%APACHE_CONF%" | findstr /V "#" >nul 2>&1
-if errorlevel 1 (
-    powershell -Command "(Get-Content '%APACHE_CONF%') -replace '#Include conf/extra/httpd-vhosts.conf','Include conf/extra/httpd-vhosts.conf' | Set-Content '%APACHE_CONF%'"
-    echo       เปิด Virtual Hosts แล้ว
-) else (
-    echo       Virtual Hosts เปิดอยู่แล้ว
-)
-
-:: ─────────────────────────────────────────────
-:: [4] เพิ่ม VirtualHost ใน httpd-vhosts.conf
-:: ─────────────────────────────────────────────
-echo [4/4] ตั้งค่า VirtualHost...
-findstr /C:"DocumentRoot" "%VHOSTS_CONF%" | findstr /C:"mcstore" >nul 2>&1
-if errorlevel 1 (
-    :: backup ไฟล์เดิมก่อน
-    copy "%VHOSTS_CONF%" "%VHOSTS_CONF%.bak" >nul
-
-    :: เพิ่ม VirtualHost block
+    echo Adding VirtualHost...
     echo. >> "%VHOSTS_CONF%"
     echo ^<VirtualHost *:80^> >> "%VHOSTS_CONF%"
     echo     DocumentRoot "%MCSTORE_PATH%" >> "%VHOSTS_CONF%"
     echo     ServerName localhost >> "%VHOSTS_CONF%"
     echo     ^<Directory "%MCSTORE_PATH%"^> >> "%VHOSTS_CONF%"
-    echo         Options Indexes FollowSymLinks >> "%VHOSTS_CONF%"
+    echo         Options FollowSymLinks >> "%VHOSTS_CONF%"
     echo         AllowOverride All >> "%VHOSTS_CONF%"
     echo         Require all granted >> "%VHOSTS_CONF%"
     echo     ^</Directory^> >> "%VHOSTS_CONF%"
     echo ^</VirtualHost^> >> "%VHOSTS_CONF%"
-
-    echo       เพิ่ม VirtualHost สำหรับ mcstore แล้ว
+    echo       VirtualHost added
 ) else (
-    echo       VirtualHost มีอยู่แล้ว
+    echo       VirtualHost already exists
 )
 
-:: ─────────────────────────────────────────────
-:: Restart Apache
-:: ─────────────────────────────────────────────
 echo.
-echo กำลัง restart Apache...
-set APACHE_BIN=%XAMPP_DIR%\apache\bin\httpd.exe
-if exist "%APACHE_BIN%" (
-    taskkill /F /IM httpd.exe >nul 2>&1
-    timeout /t 1 >nul
-    start "" "%APACHE_BIN%"
-    timeout /t 2 >nul
-    echo Apache restart แล้ว
-) else (
-    echo.
-    echo *** กรุณา restart Apache ใน XAMPP Control Panel ด้วยตนเอง ***
-)
+echo Restarting Apache...
+taskkill /F /IM httpd.exe >nul 2>&1
+timeout /t 2 >nul
+start "" "%XAMPP_DIR%\apache\bin\httpd.exe"
+timeout /t 2 >nul
 
 echo.
 echo ================================================
-echo   Setup เสร็จแล้ว!
-echo   เปิดเบราว์เซอร์ไปที่: http://localhost/
+echo   Done! Open browser: http://localhost/
 echo ================================================
 echo.
 pause
