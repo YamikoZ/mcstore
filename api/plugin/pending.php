@@ -40,9 +40,9 @@ $whitelist = json_decode(Settings::get('command_whitelist', '[]'), true) ?: [];
 
 // Get pending deliveries for this server
 $pending = $db->fetchAll(
-    "SELECT dq.id, dq.username, dq.command 
-     FROM delivery_queue dq 
-     WHERE dq.server_id = ? AND dq.status = 'pending' 
+    "SELECT dq.id, dq.username, dq.command, dq.item_name
+     FROM delivery_queue dq
+     WHERE dq.server_id = ? AND dq.status = 'pending'
      ORDER BY dq.created_at ASC LIMIT 20",
     [$serverId]
 );
@@ -58,9 +58,10 @@ foreach ($pending as $p) {
         continue;
     }
     $deliveries[] = [
-        'id'       => (int) $p['id'],
-        'username' => $p['username'],
-        'command'  => $p['command'],
+        'id'        => (int) $p['id'],
+        'username'  => $p['username'],
+        'command'   => $p['command'],
+        'item_name' => $p['item_name'] ?? '',
     ];
 }
 

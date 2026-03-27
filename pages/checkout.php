@@ -96,8 +96,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->commit();
         
         auditLog($user['id'], 'purchase', "Order #{$orderId}, total: {$total}");
-        createNotification($user['id'], 'สั่งซื้อสำเร็จ', "ออเดอร์ #{$orderId} จำนวน " . formatMoney($total), 'success', 'profile/orders');
+        createNotification($user['id'], 'สั่งซื้อสำเร็จ', "ออเดอร์ #{$orderId} จำนวน " . formatMoney($total) . " — เข้าเซิร์ฟเวอร์เพื่อรับของ", 'success', 'profile/orders');
         flash('success', "สั่งซื้อสำเร็จ! ออเดอร์ #{$orderId}");
+        flash('info', "กรุณาเข้าเซิร์ฟเวอร์ภายใน 30 นาที ระบบจะส่งของให้อัตโนมัติเมื่อคุณออนไลน์");
         redirect('profile/orders');
     } catch (Exception $e) {
         $db->rollback();

@@ -157,7 +157,14 @@ class Auth {
     // ── Session Helpers ──
 
     public static function check() {
-        return isset($_SESSION['user_id']);
+        if (!isset($_SESSION['user_id'])) return false;
+        $db = Database::getInstance();
+        $exists = $db->fetch("SELECT id FROM users WHERE id = ?", [$_SESSION['user_id']]);
+        if (!$exists) {
+            session_unset();
+            return false;
+        }
+        return true;
     }
 
     public static function user() {

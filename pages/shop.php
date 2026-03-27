@@ -158,9 +158,9 @@ include BASE_PATH . '/layout/header.php';
                                     <?php endif; ?>
                                 </div>
 
-                                <?php if ($prod['stock'] !== null && $prod['stock'] <= 5 && $prod['stock'] > 0): ?>
+                                <?php if ($prod['stock'] !== null && $prod['stock'] > 0 && $prod['stock'] <= 5): ?>
                                     <p class="text-xs text-red-400 mt-2"><i class="fas fa-exclamation-triangle mr-1"></i> เหลือ <?= (int)$prod['stock'] ?> ชิ้น</p>
-                                <?php elseif ($prod['stock'] !== null && $prod['stock'] <= 0): ?>
+                                <?php elseif ($prod['stock'] !== null && $prod['stock'] == 0): ?>
                                     <p class="text-xs text-red-400 mt-2"><i class="fas fa-times-circle mr-1"></i> สินค้าหมด</p>
                                 <?php endif; ?>
                             </div>

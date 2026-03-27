@@ -198,6 +198,13 @@ if ($feat['contact'])  $navItems[] = ['url' => 'contact',  'icon' => 'fa-envelop
             });
         </script>
     <?php endif; ?>
+    <?php if ($flashInfo = flash('info')): ?>
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                Swal.fire({ icon: 'info', title: 'แจ้งเตือน', text: <?= json_encode($flashInfo) ?>, timer: 6000, showConfirmButton: false });
+            });
+        </script>
+    <?php endif; ?>
 
     <!-- Main Content -->
     <main class="flex-1">
