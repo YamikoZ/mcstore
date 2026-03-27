@@ -73,9 +73,10 @@ class Auth {
         if ($config['mode'] === 'plugin') {
             $tbl = $config['plugin']['table'];
             $cols = $config['plugin']['columns'];
-            $sql = "SELECT {$cols['id']} AS id, {$cols['username']} AS username, {$cols['password']} AS password, 
+            // ใช้ realname เพื่อให้ตรงกับที่ AuthMe plugin บันทึกไว้
+            $sql = "SELECT {$cols['id']} AS id, realname AS username, {$cols['password']} AS password,
                     {$cols['email']} AS email
-                    FROM {$tbl} WHERE LOWER({$cols['username']}) = LOWER(?)";
+                    FROM {$tbl} WHERE LOWER(realname) = LOWER(?)";
         } else {
             $sql = "SELECT id, username, password, email FROM users WHERE LOWER(username) = LOWER(?)";
         }
@@ -92,10 +93,11 @@ class Auth {
         if ($config['mode'] === 'plugin') {
             $tbl = $config['plugin']['table'];
             $cols = $config['plugin']['columns'];
+            // AuthMe ใช้ username=lowercase, realname=ตามที่พิมพ์จริง
             $db->execute(
-                "INSERT INTO {$tbl} ({$cols['username']}, {$cols['password']}, {$cols['email']}, {$cols['ip']}, {$cols['register_date']}, {$cols['last_login']}) 
-                 VALUES (?, ?, ?, ?, ?, ?)",
-                [$username, $hashedPassword, $email ?? '', $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0', time() * 1000, time() * 1000]
+                "INSERT INTO {$tbl} ({$cols['username']}, realname, {$cols['password']}, {$cols['email']}, {$cols['ip']}, {$cols['register_date']}, {$cols['last_login']})
+                 VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [strtolower($username), $username, $hashedPassword, $email ?? '', $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0', time() * 1000, time() * 1000]
             );
             $pluginUserId = $db->lastInsertId();
 
