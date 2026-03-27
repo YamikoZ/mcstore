@@ -24,10 +24,8 @@ uploads/settings/
 .DS_Store
 Thumbs.db
 
-# ── Plugin Build Artifacts ───────────────────────────────────
-mysqlcmd/target/
-mysqlcmd/.mvn/
-mysqlcmd/*.class
+# ── Plugin Source (ไม่แจก) ───────────────────────────────────
+mysqlcmd/
 
 # ── IDE ──────────────────────────────────────────────────────
 .vscode/
