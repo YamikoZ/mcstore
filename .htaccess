@@ -1,11 +1,12 @@
+Options -Indexes
 RewriteEngine On
-RewriteBase /
 
-# ถ้าเป็นไฟล์จริง (รูป, CSS, JS) → ส่งตรง
+# ไฟล์/โฟลเดอร์จริง (CSS, JS, รูป) → ส่งตรง
 RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 
-# ยกเว้นโฟลเดอร์ assets และ uploads เท่านั้น
-RewriteCond %{REQUEST_URI} !^/(assets|uploads)/ [NC]
+# ยกเว้น assets และ uploads
+RewriteCond %{REQUEST_URI} !/(assets|uploads)/ [NC]
 
-# ที่เหลือทั้งหมด → เข้า index.php
+# ทุกอย่างเข้า index.php (ทำงานได้ทั้ง root และ subfolder โดยไม่ต้อง RewriteBase)
 RewriteRule ^(.*)$ index.php?route=$1 [QSA,L]

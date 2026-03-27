@@ -8,7 +8,10 @@ session_start();
 
 // Base path
 define('BASE_PATH', __DIR__);
-define('BASE_URL', '');
+
+// Auto-detect BASE_URL (root หรือ subfolder เช่น /mcstore)
+$_scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+define('BASE_URL', $_scriptDir === '.' ? '' : $_scriptDir);
 
 // Load core
 require_once BASE_PATH . '/classes/Database.php';
