@@ -213,3 +213,16 @@ Body: { "delivery_id": 123, "status": "delivered" }
 
 Private — SillyWorld Server
 ห้ามนำโค้ดไปใช้เชิงพาณิชย์โดยไม่ได้รับอนุญาต
+
+---
+
+## ซื้อ License / ขอแก้ไขโดเมน
+
+ต้องการนำระบบนี้ไปใช้กับเซิร์ฟเวอร์ของตัวเอง หรือขอแก้ไขโดเมน/ตั้งค่าใหม่?
+
+ติดต่อได้ที่:
+
+- **Discord:** https://discord.gg/pbtnv9A8cH (DM หา Admin)
+- **Discord Server:** เข้า server แล้ว inbox มาได้เลย
+
+> ราคาและเงื่อนไขตกลงกันในแชท
