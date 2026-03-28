@@ -65,7 +65,10 @@ $isOnline = $db->fetch(
 );
 if (!$isOnline) {
     $who = empty($giftTo) ? 'คุณ' : "ผู้เล่น \"{$recipientName}\"";
-    jsonResponse(['success' => false, 'message' => "{$who} ต้องออนไลน์อยู่ในเซิร์ฟเวอร์ก่อนจึงจะซื้อได้"]);
+    // DEBUG — remove after testing
+    $debugRow = $db->fetch("SELECT username, server_id, updated_at FROM online_players WHERE LOWER(username) = LOWER(?)", [$recipientName]);
+    $debugMsg = "[DEBUG] recipientName={$recipientName} serverId={$serverId} | row=" . json_encode($debugRow);
+    jsonResponse(['success' => false, 'message' => "{$who} ต้องออนไลน์อยู่ในเซิร์ฟเวอร์ก่อนจึงจะซื้อได้", 'debug' => $debugMsg]);
 }
 
 // ─── One-per-user check (แรงค์/VIP ห้ามซื้อซ้ำ) ──────────────────────────
