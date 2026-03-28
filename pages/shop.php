@@ -147,7 +147,12 @@ include BASE_PATH . '/layout/header.php';
                                         <span class="text-lg font-bold" style="color: var(--color-accent);"><?= formatMoney($prod['price']) ?></span>
                                     </div>
                                     <?php if (Auth::check()): ?>
-                                        <button onclick="openBuyModal(<?= (int)$prod['id'] ?>, <?= json_encode($currentServer['id']) ?>, <?= (float)$prod['price'] ?>, <?= $prod['one_per_user'] ? 'true' : 'false' ?>, <?= json_encode($prod['name']) ?>)"
+                                        <button onclick="openBuyModal(this)"
+                                                data-product-id="<?= (int)$prod['id'] ?>"
+                                                data-server-id="<?= e($currentServer['id']) ?>"
+                                                data-price="<?= (float)$prod['price'] ?>"
+                                                data-one-per-user="<?= $prod['one_per_user'] ? '1' : '0' ?>"
+                                                data-name="<?= e($prod['name']) ?>"
                                                 class="btn-primary px-4 py-2 rounded-lg text-sm font-semibold">
                                             <i class="fas fa-bolt mr-1"></i> ซื้อเลย
                                         </button>
@@ -178,7 +183,12 @@ include BASE_PATH . '/layout/header.php';
 </div>
 
 <script>
-function openBuyModal(productId, serverId, price, isOnePerUser, productName) {
+function openBuyModal(btn) {
+    const productId   = parseInt(btn.dataset.productId);
+    const serverId    = btn.dataset.serverId;
+    const price       = parseFloat(btn.dataset.price);
+    const isOnePerUser = btn.dataset.onePerUser === '1';
+    const productName = btn.dataset.name;
     const isGiftChecked = false;
     Swal.fire({
         title: productName,
