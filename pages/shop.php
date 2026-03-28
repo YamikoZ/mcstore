@@ -183,100 +183,96 @@ include BASE_PATH . '/layout/header.php';
 </div>
 
 <script>
+var SHOP_BUY_URL  = '<?= e(url("api/shop/buynow")) ?>';
+var SHOP_CSRF     = '<?= e(csrf_token()) ?>';
+
+function formatMoney(n) {
+    return parseFloat(n).toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' \u0e1a\u0e32\u0e17';
+}
+
+function shopToggleGift() {
+    var checked = document.getElementById('swal-gift').checked;
+    document.getElementById('gift-section').style.display = checked ? 'block' : 'none';
+}
+
 function openBuyModal(btn) {
-    const productId   = parseInt(btn.dataset.productId);
-    const serverId    = btn.dataset.serverId;
-    const price       = parseFloat(btn.dataset.price);
-    const isOnePerUser = btn.dataset.onePerUser === '1';
-    const productName = btn.dataset.name;
-    const isGiftChecked = false;
+    var productId    = parseInt(btn.dataset.productId);
+    var serverId     = btn.dataset.serverId;
+    var price        = parseFloat(btn.dataset.price);
+    var isOnePerUser = btn.dataset.onePerUser === '1';
+    var productName  = btn.dataset.name;
+
+    var html = '<div style="text-align:left;font-size:14px;">';
+    html += '<div style="margin-bottom:12px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;">';
+    html += '<span style="opacity:0.6;">\u0e23\u0e32\u0e04\u0e32:</span> ';
+    html += '<strong style="color:var(--color-accent);font-size:18px;margin-left:6px;">' + formatMoney(price) + '</strong>';
+    if (isOnePerUser) {
+        html += '<span style="font-size:11px;background:rgba(239,68,68,0.2);color:#ef4444;padding:2px 8px;border-radius:4px;margin-left:8px;">\u0e0b\u0e37\u0e49\u0e2d\u0e44\u0e14\u0e49\u0e04\u0e23\u0e31\u0e49\u0e07\u0e40\u0e14\u0e35\u0e22\u0e27</span>';
+    }
+    html += '</div>';
+    if (!isOnePerUser) {
+        html += '<div style="margin-bottom:12px;">';
+        html += '<label style="font-size:12px;opacity:0.6;display:block;margin-bottom:4px;">\u0e08\u0e33\u0e19\u0e27\u0e19</label>';
+        html += '<input type="number" id="swal-qty" min="1" max="99" value="1" style="width:100%;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:inherit;font-size:14px;" oninput="document.getElementById(\'swal-total\').textContent=formatMoney(' + price + '*Math.max(1,parseInt(this.value)||1))">';
+        html += '</div>';
+    }
+    html += '<div style="margin-bottom:12px;">';
+    html += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px;background:rgba(255,255,255,0.04);border-radius:8px;">';
+    html += '<input type="checkbox" id="swal-gift" onchange="shopToggleGift()" style="width:16px;height:16px;cursor:pointer;">';
+    html += '<span><i class="fas fa-gift" style="color:var(--color-accent);"></i> \u0e2a\u0e48\u0e07\u0e40\u0e1b\u0e47\u0e19\u0e02\u0e2d\u0e07\u0e02\u0e27\u0e31\u0e0d\u0e43\u0e2b\u0e49\u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e19</span>';
+    html += '</label></div>';
+    html += '<div id="gift-section" style="display:none;margin-bottom:12px;">';
+    html += '<label style="font-size:12px;opacity:0.6;display:block;margin-bottom:4px;">\u0e0a\u0e37\u0e48\u0e2d\u0e1c\u0e39\u0e49\u0e40\u0e25\u0e48\u0e19\u0e17\u0e35\u0e48\u0e23\u0e31\u0e1a\u0e02\u0e2d\u0e07\u0e02\u0e27\u0e31\u0e0d</label>';
+    html += '<input type="text" id="swal-gift-to" placeholder="username \u0e43\u0e19\u0e40\u0e01\u0e21" style="width:100%;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:inherit;font-size:14px;">';
+    html += '<p style="font-size:11px;opacity:0.4;margin-top:4px;">\u0e1c\u0e39\u0e49\u0e23\u0e31\u0e1a\u0e15\u0e49\u0e2d\u0e07\u0e2d\u0e2d\u0e19\u0e44\u0e25\u0e19\u0e4c\u0e2d\u0e22\u0e39\u0e48\u0e43\u0e19\u0e40\u0e0b\u0e34\u0e23\u0e4c\u0e1f\u0e40\u0e27\u0e2d\u0e23\u0e4c\u0e01\u0e48\u0e2d\u0e19</p>';
+    html += '</div>';
+    html += '<div style="font-size:12px;opacity:0.5;text-align:center;margin-top:4px;">\u0e22\u0e2d\u0e14\u0e23\u0e27\u0e21: <strong id="swal-total">' + formatMoney(price) + '</strong></div>';
+    html += '</div>';
+
     Swal.fire({
         title: productName,
-        html: `
-            <div style="text-align:left; font-size:14px;">
-                <div style="margin-bottom:12px; padding:10px; background:rgba(255,255,255,0.05); border-radius:8px;">
-                    <span style="opacity:0.6;">ราคา:</span>
-                    <strong style="color:var(--color-accent); font-size:18px; margin-left:6px;">${formatMoney(price)}</strong>
-                    ${isOnePerUser ? '<span style="font-size:11px; background:rgba(239,68,68,0.2); color:#ef4444; padding:2px 8px; border-radius:4px; margin-left:8px;">ซื้อได้ครั้งเดียว</span>' : ''}
-                </div>
-                ${!isOnePerUser ? `
-                <div style="margin-bottom:12px;">
-                    <label style="font-size:12px; opacity:0.6; display:block; margin-bottom:4px;">จำนวน</label>
-                    <input type="number" id="swal-qty" min="1" max="99" value="1"
-                        style="width:100%; padding:8px 12px; border-radius:8px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1); color:inherit; font-size:14px;"
-                        oninput="document.getElementById('swal-total').textContent = formatMoney(price * Math.max(1, parseInt(this.value)||1))">
-                </div>` : ''}
-                <div style="margin-bottom:12px;">
-                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:10px; background:rgba(255,255,255,0.04); border-radius:8px;">
-                        <input type="checkbox" id="swal-gift" onchange="toggleGift()"
-                            style="width:16px; height:16px; cursor:pointer; accent-color:var(--color-primary);">
-                        <span><i class="fas fa-gift" style="color:var(--color-accent);"></i> ส่งเป็นของขวัญให้เพื่อน</span>
-                    </label>
-                </div>
-                <div id="gift-section" style="display:none; margin-bottom:12px;">
-                    <label style="font-size:12px; opacity:0.6; display:block; margin-bottom:4px;">ชื่อผู้เล่นที่รับของขวัญ</label>
-                    <input type="text" id="swal-gift-to" placeholder="username ในเกม"
-                        style="width:100%; padding:8px 12px; border-radius:8px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1); color:inherit; font-size:14px;">
-                    <p style="font-size:11px; opacity:0.4; margin-top:4px;"><i class="fas fa-info-circle"></i> ผู้รับต้องออนไลน์อยู่ในเซิร์ฟเวอร์</p>
-                </div>
-                <div style="font-size:12px; opacity:0.5; text-align:center; margin-top:4px;">
-                    ยอดรวม: <strong id="swal-total">${formatMoney(price)}</strong>
-                </div>
-            </div>
-        `,
+        html: html,
         showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-bolt mr-1"></i> ยืนยันซื้อ',
-        cancelButtonText: 'ยกเลิก',
+        confirmButtonText: '<i class="fas fa-bolt mr-1"></i> \u0e22\u0e37\u0e19\u0e22\u0e31\u0e19\u0e0b\u0e37\u0e49\u0e2d',
+        cancelButtonText: '\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01',
         confirmButtonColor: 'var(--color-primary)',
         background: 'var(--color-surface)',
         color: 'var(--color-text)',
-        didOpen: () => {
-            window.formatMoney = (n) => parseFloat(n).toLocaleString('th-TH', {minimumFractionDigits:2}) + ' บาท';
-            window.toggleGift = () => {
-                const checked = document.getElementById('swal-gift').checked;
-                document.getElementById('gift-section').style.display = checked ? 'block' : 'none';
-            };
-        },
-        preConfirm: () => {
-            const qty = isOnePerUser ? 1 : Math.max(1, Math.min(99, parseInt(document.getElementById('swal-qty')?.value) || 1));
-            const isGift = document.getElementById('swal-gift').checked;
-            const giftTo = isGift ? document.getElementById('swal-gift-to').value.trim() : '';
+        preConfirm: function() {
+            var qtyEl = document.getElementById('swal-qty');
+            var qty = isOnePerUser ? 1 : Math.max(1, Math.min(99, parseInt(qtyEl ? qtyEl.value : '1') || 1));
+            var isGift = document.getElementById('swal-gift').checked;
+            var giftTo = isGift ? document.getElementById('swal-gift-to').value.trim() : '';
             if (isGift && !giftTo) {
-                Swal.showValidationMessage('กรุณากรอกชื่อผู้เล่นที่ต้องการส่งของขวัญ');
+                Swal.showValidationMessage('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e01\u0e23\u0e2d\u0e01\u0e0a\u0e37\u0e48\u0e2d\u0e1c\u0e39\u0e49\u0e40\u0e25\u0e48\u0e19\u0e17\u0e35\u0e48\u0e15\u0e49\u0e2d\u0e07\u0e01\u0e32\u0e23\u0e2a\u0e48\u0e07\u0e02\u0e2d\u0e07\u0e02\u0e27\u0e31\u0e0d');
                 return false;
             }
-            return { qty, giftTo };
+            return { qty: qty, giftTo: giftTo };
         }
-    }).then(result => {
+    }).then(function(result) {
         if (result.isConfirmed) {
             buyNow(productId, serverId, result.value.qty, result.value.giftTo);
         }
     });
 }
 
-function formatMoney(n) {
-    return parseFloat(n).toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
-}
-
 function buyNow(productId, serverId, quantity, giftTo) {
-    const btn = Swal.getConfirmButton?.();
-    Swal.fire({ title: 'กำลังดำเนินการ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-    fetch('<?= url('api/shop/buynow') ?>', {
+    Swal.fire({ title: '\u0e01\u0e33\u0e25\u0e31\u0e07\u0e14\u0e33\u0e40\u0e19\u0e34\u0e19\u0e01\u0e32\u0e23...', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+    fetch(SHOP_BUY_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= csrf_token() ?>' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': SHOP_CSRF },
         body: JSON.stringify({ product_id: productId, server_id: serverId, quantity: quantity, gift_to: giftTo || '' })
     })
-    .then(r => r.json())
-    .then(data => {
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
         if (data.success) {
-            Swal.fire({ icon: 'success', title: 'สำเร็จ!', text: data.message, timer: 2000, showConfirmButton: false })
-                .then(() => { if (data.redirect) window.location.href = data.redirect; });
+            Swal.fire({ icon: 'success', title: '\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08!', text: data.message, timer: 2000, showConfirmButton: false })
+                .then(function() { if (data.redirect) window.location.href = data.redirect; });
         } else {
-            Swal.fire({ icon: 'error', title: 'ไม่สำเร็จ', text: data.message });
+            Swal.fire({ icon: 'error', title: '\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08', text: data.message });
         }
     })
-    .catch(() => Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'กรุณาลองใหม่อีกครั้ง' }));
+    .catch(function() { Swal.fire({ icon: 'error', title: '\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14', text: '\u0e01\u0e23\u0e38\u0e13\u0e32\u0e25\u0e2d\u0e07\u0e43\u0e2b\u0e21\u0e48\u0e2d\u0e35\u0e01\u0e04\u0e23\u0e31\u0e49\u0e07' }); });
 }
 </script>
 
