@@ -147,7 +147,7 @@ include BASE_PATH . '/layout/header.php';
                                         <span class="text-lg font-bold" style="color: var(--color-accent);"><?= formatMoney($prod['price']) ?></span>
                                     </div>
                                     <?php if (Auth::check()): ?>
-                                        <button onclick="buyNow(<?= (int)$prod['id'] ?>, '<?= e($currentServer['id']) ?>', <?= (float)$prod['price'] ?>, <?= $prod['one_per_user'] ? 'true' : 'false' ?>)"
+                                        <button onclick="openBuyModal(<?= (int)$prod['id'] ?>, '<?= e($currentServer['id']) ?>', <?= (float)$prod['price'] ?>, <?= $prod['one_per_user'] ? 'true' : 'false' ?>, '<?= e(addslashes($prod['name'])) ?>')"
                                                 class="btn-primary px-4 py-2 rounded-lg text-sm font-semibold">
                                             <i class="fas fa-bolt mr-1"></i> ซื้อเลย
                                         </button>
@@ -176,5 +176,98 @@ include BASE_PATH . '/layout/header.php';
         </div>
     </div>
 </div>
+
+<script>
+function openBuyModal(productId, serverId, price, isOnePerUser, productName) {
+    const isGiftChecked = false;
+    Swal.fire({
+        title: productName,
+        html: `
+            <div style="text-align:left; font-size:14px;">
+                <div style="margin-bottom:12px; padding:10px; background:rgba(255,255,255,0.05); border-radius:8px;">
+                    <span style="opacity:0.6;">ราคา:</span>
+                    <strong style="color:var(--color-accent); font-size:18px; margin-left:6px;">${formatMoney(price)}</strong>
+                    ${isOnePerUser ? '<span style="font-size:11px; background:rgba(239,68,68,0.2); color:#ef4444; padding:2px 8px; border-radius:4px; margin-left:8px;">ซื้อได้ครั้งเดียว</span>' : ''}
+                </div>
+                ${!isOnePerUser ? `
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:12px; opacity:0.6; display:block; margin-bottom:4px;">จำนวน</label>
+                    <input type="number" id="swal-qty" min="1" max="99" value="1"
+                        style="width:100%; padding:8px 12px; border-radius:8px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1); color:inherit; font-size:14px;"
+                        oninput="document.getElementById('swal-total').textContent = formatMoney(price * Math.max(1, parseInt(this.value)||1))">
+                </div>` : ''}
+                <div style="margin-bottom:12px;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:10px; background:rgba(255,255,255,0.04); border-radius:8px;">
+                        <input type="checkbox" id="swal-gift" onchange="toggleGift()"
+                            style="width:16px; height:16px; cursor:pointer; accent-color:var(--color-primary);">
+                        <span><i class="fas fa-gift" style="color:var(--color-accent);"></i> ส่งเป็นของขวัญให้เพื่อน</span>
+                    </label>
+                </div>
+                <div id="gift-section" style="display:none; margin-bottom:12px;">
+                    <label style="font-size:12px; opacity:0.6; display:block; margin-bottom:4px;">ชื่อผู้เล่นที่รับของขวัญ</label>
+                    <input type="text" id="swal-gift-to" placeholder="username ในเกม"
+                        style="width:100%; padding:8px 12px; border-radius:8px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1); color:inherit; font-size:14px;">
+                    <p style="font-size:11px; opacity:0.4; margin-top:4px;"><i class="fas fa-info-circle"></i> ผู้รับต้องออนไลน์อยู่ในเซิร์ฟเวอร์</p>
+                </div>
+                <div style="font-size:12px; opacity:0.5; text-align:center; margin-top:4px;">
+                    ยอดรวม: <strong id="swal-total">${formatMoney(price)}</strong>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-bolt mr-1"></i> ยืนยันซื้อ',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: 'var(--color-primary)',
+        background: 'var(--color-surface)',
+        color: 'var(--color-text)',
+        didOpen: () => {
+            window.formatMoney = (n) => parseFloat(n).toLocaleString('th-TH', {minimumFractionDigits:2}) + ' บาท';
+            window.toggleGift = () => {
+                const checked = document.getElementById('swal-gift').checked;
+                document.getElementById('gift-section').style.display = checked ? 'block' : 'none';
+            };
+        },
+        preConfirm: () => {
+            const qty = isOnePerUser ? 1 : Math.max(1, Math.min(99, parseInt(document.getElementById('swal-qty')?.value) || 1));
+            const isGift = document.getElementById('swal-gift').checked;
+            const giftTo = isGift ? document.getElementById('swal-gift-to').value.trim() : '';
+            if (isGift && !giftTo) {
+                Swal.showValidationMessage('กรุณากรอกชื่อผู้เล่นที่ต้องการส่งของขวัญ');
+                return false;
+            }
+            return { qty, giftTo };
+        }
+    }).then(result => {
+        if (result.isConfirmed) {
+            buyNow(productId, serverId, result.value.qty, result.value.giftTo);
+        }
+    });
+}
+
+function formatMoney(n) {
+    return parseFloat(n).toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' บาท';
+}
+
+function buyNow(productId, serverId, quantity, giftTo) {
+    const btn = Swal.getConfirmButton?.();
+    Swal.fire({ title: 'กำลังดำเนินการ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    fetch('<?= url('api/shop/buynow') ?>', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '<?= csrf_token() ?>' },
+        body: JSON.stringify({ product_id: productId, server_id: serverId, quantity: quantity, gift_to: giftTo || '' })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({ icon: 'success', title: 'สำเร็จ!', text: data.message, timer: 2000, showConfirmButton: false })
+                .then(() => { if (data.redirect) window.location.href = data.redirect; });
+        } else {
+            Swal.fire({ icon: 'error', title: 'ไม่สำเร็จ', text: data.message });
+        }
+    })
+    .catch(() => Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'กรุณาลองใหม่อีกครั้ง' }));
+}
+</script>
 
 <?php include BASE_PATH . '/layout/footer.php'; ?>

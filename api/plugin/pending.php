@@ -71,6 +71,21 @@ if ($onlineCount !== null) {
     Settings::set('server_online_count', (int)$onlineCount);
 }
 
+// Update online players list
+$onlinePlayersHeader = $_SERVER['HTTP_X_ONLINE_PLAYERS'] ?? '';
+$db->execute("DELETE FROM online_players WHERE server_id = ?", [$serverId]);
+if (!empty($onlinePlayersHeader)) {
+    $players = array_filter(array_map('trim', explode(',', $onlinePlayersHeader)));
+    foreach ($players as $player) {
+        if (strlen($player) >= 1 && strlen($player) <= 64) {
+            $db->execute(
+                "INSERT INTO online_players (username, server_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE updated_at = NOW()",
+                [$player, $serverId]
+            );
+        }
+    }
+}
+
 jsonResponse([
     'success'    => true,
     'server_id'  => (int) $serverId,

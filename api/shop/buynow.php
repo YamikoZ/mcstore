@@ -22,6 +22,7 @@ $body      = json_decode(file_get_contents('php://input'), true);
 $productId = (int) ($body['product_id'] ?? 0);
 $serverId  = trim((string) ($body['server_id'] ?? ''));
 $quantity  = max(1, min(99, (int) ($body['quantity'] ?? 1)));
+$giftTo    = trim((string) ($body['gift_to'] ?? ''));
 
 if (!$productId || !$serverId) {
     jsonResponse(['success' => false, 'message' => 'ข้อมูลไม่ถูกต้อง'], 400);
@@ -42,18 +43,44 @@ if (!$server) {
     jsonResponse(['success' => false, 'message' => 'ไม่พบเซิร์ฟเวอร์'], 400);
 }
 
+// ─── Validate gift recipient ──────────────────────────────────────────────
+$recipientName = $user['username']; // default = ตัวเอง
+if (!empty($giftTo)) {
+    if (strtolower($giftTo) === strtolower($user['username'])) {
+        jsonResponse(['success' => false, 'message' => 'ไม่สามารถส่งของขวัญให้ตัวเองได้']);
+    }
+    $giftUser = $db->fetch("SELECT username FROM users WHERE LOWER(username) = LOWER(?)", [$giftTo]);
+    if (!$giftUser) {
+        jsonResponse(['success' => false, 'message' => "ไม่พบผู้เล่น \"{$giftTo}\" ในระบบ"]);
+    }
+    $recipientName = $giftUser['username'];
+}
+
+// ─── Online check — ผู้รับต้องอยู่ในเซิร์ฟเวอร์ ─────────────────────────
+$isOnline = $db->fetch(
+    "SELECT username FROM online_players
+     WHERE LOWER(username) = LOWER(?) AND server_id = ?
+     AND updated_at > DATE_SUB(NOW(), INTERVAL 2 MINUTE)",
+    [$recipientName, $serverId]
+);
+if (!$isOnline) {
+    $who = empty($giftTo) ? 'คุณ' : "ผู้เล่น \"{$recipientName}\"";
+    jsonResponse(['success' => false, 'message' => "{$who} ต้องออนไลน์อยู่ในเซิร์ฟเวอร์ก่อนจึงจะซื้อได้"]);
+}
+
 // ─── One-per-user check (แรงค์/VIP ห้ามซื้อซ้ำ) ──────────────────────────
 if ($product['one_per_user']) {
     $quantity = 1; // บังคับ 1 เสมอ
     $alreadyBought = $db->fetch(
         "SELECT oi.id FROM order_items oi
          JOIN orders o ON oi.order_id = o.id
-         WHERE o.username = ? AND oi.product_id = ? AND o.status NOT IN ('cancelled','refunded')
+         WHERE o.recipient = ? AND oi.product_id = ? AND o.status NOT IN ('cancelled','refunded')
          LIMIT 1",
-        [$user['username'], $productId]
+        [$recipientName, $productId]
     );
     if ($alreadyBought) {
-        jsonResponse(['success' => false, 'message' => 'คุณมียศ/สิทธิ์นี้อยู่แล้ว ไม่สามารถซื้อซ้ำได้']);
+        $who = ($recipientName === $user['username']) ? 'คุณ' : "ผู้เล่น \"{$recipientName}\"";
+        jsonResponse(['success' => false, 'message' => "{$who} มียศ/สิทธิ์นี้อยู่แล้ว ไม่สามารถซื้อซ้ำได้"]);
     }
 }
 
@@ -93,9 +120,10 @@ try {
     }
 
     // Create order
+    $isGift = !empty($giftTo);
     $db->execute(
-        "INSERT INTO orders (username, total, status) VALUES (?, ?, 'processing')",
-        [$user['username'], $total]
+        "INSERT INTO orders (username, recipient, total, status, note) VALUES (?, ?, ?, 'processing', ?)",
+        [$user['username'], $recipientName, $total, $isGift ? "ของขวัญจาก {$user['username']}" : null]
     );
     $orderId = $db->lastInsertId();
 
@@ -121,12 +149,12 @@ try {
         foreach ($commands as $cmd) {
             $finalCmd = str_replace(
                 ['{player}', '{username}', '{amount}'],
-                [$user['username'], $user['username'], (string)$quantity],
+                [$recipientName, $recipientName, (string)$quantity],
                 $cmd
             );
             $db->execute(
                 "INSERT INTO delivery_queue (order_id, username, server_id, player_name, command, item_name) VALUES (?, ?, ?, ?, ?, ?)",
-                [$orderId, $user['username'], $serverId, $user['username'], $finalCmd, $product['name']]
+                [$orderId, $recipientName, $serverId, $recipientName, $finalCmd, $product['name']]
             );
         }
     }
@@ -139,11 +167,14 @@ try {
 
     $db->commit();
 
-    createNotification($user['id'], 'ซื้อสำเร็จ', $product['name'] . ' x' . $quantity . ' — ' . formatMoney($total), 'success', 'orders');
+    $notifMsg = $isGift
+        ? "ส่งของขวัญ {$product['name']} x{$quantity} ให้ {$recipientName} — " . formatMoney($total)
+        : $product['name'] . ' x' . $quantity . ' — ' . formatMoney($total);
+    createNotification($user['id'], $isGift ? 'ส่งของขวัญสำเร็จ' : 'ซื้อสำเร็จ', $notifMsg, 'success', 'orders');
 
     jsonResponse([
         'success'  => true,
-        'message'  => 'ซื้อสำเร็จ! กำลังส่งของเข้าเกม...',
+        'message'  => $isGift ? "ส่งของขวัญให้ {$recipientName} สำเร็จ!" : 'ซื้อสำเร็จ! กำลังส่งของเข้าเกม...',
         'redirect' => url('orders'),
     ]);
 
