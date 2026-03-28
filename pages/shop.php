@@ -202,31 +202,41 @@ function openBuyModal(btn) {
     var isOnePerUser = btn.dataset.onePerUser === '1';
     var productName  = btn.dataset.name;
 
-    var html = '<div style="text-align:left;font-size:14px;">';
-    html += '<div style="margin-bottom:12px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;">';
-    html += '<span style="opacity:0.6;">\u0e23\u0e32\u0e04\u0e32:</span> ';
-    html += '<strong style="color:var(--color-accent);font-size:18px;margin-left:6px;">' + formatMoney(price) + '</strong>';
+    var html = '<div style="display:flex;flex-direction:column;gap:10px;text-align:left;font-size:14px;">';
+
+    // Price row
+    html += '<div style="padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;display:flex;align-items:center;flex-wrap:wrap;gap:8px;">';
+    html += '<span style="opacity:0.6;">\u0e23\u0e32\u0e04\u0e32:</span>';
+    html += '<strong style="color:var(--color-accent);font-size:18px;">' + formatMoney(price) + '</strong>';
     if (isOnePerUser) {
-        html += '<span style="font-size:11px;background:rgba(239,68,68,0.2);color:#ef4444;padding:2px 8px;border-radius:4px;margin-left:8px;">\u0e0b\u0e37\u0e49\u0e2d\u0e44\u0e14\u0e49\u0e04\u0e23\u0e31\u0e49\u0e07\u0e40\u0e14\u0e35\u0e22\u0e27</span>';
+        html += '<span style="font-size:11px;background:rgba(239,68,68,0.2);color:#ef4444;padding:2px 8px;border-radius:4px;">\u0e0b\u0e37\u0e49\u0e2d\u0e44\u0e14\u0e49\u0e04\u0e23\u0e31\u0e49\u0e07\u0e40\u0e14\u0e35\u0e22\u0e27</span>';
     }
     html += '</div>';
+
+    // Quantity row (only if not one_per_user)
     if (!isOnePerUser) {
-        html += '<div style="margin-bottom:12px;">';
-        html += '<label style="font-size:12px;opacity:0.6;display:block;margin-bottom:4px;">\u0e08\u0e33\u0e19\u0e27\u0e19</label>';
-        html += '<input type="number" id="swal-qty" min="1" max="99" value="1" style="width:100%;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:inherit;font-size:14px;" oninput="document.getElementById(\'swal-total\').textContent=formatMoney(' + price + '*Math.max(1,parseInt(this.value)||1))">';
+        html += '<div>';
+        html += '<label style="font-size:12px;opacity:0.6;display:block;margin-bottom:4px;">\u0e23\u0e30\u0e1a\u0e38\u0e08\u0e33\u0e19\u0e27\u0e19\u0e17\u0e35\u0e48\u0e15\u0e49\u0e2d\u0e07\u0e01\u0e32\u0e23</label>';
+        html += '<input type="number" id="swal-qty" min="1" max="99" value="1" style="width:100%;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:inherit;font-size:14px;box-sizing:border-box;" oninput="document.getElementById(\'swal-total\').textContent=formatMoney(' + price + '*Math.max(1,parseInt(this.value)||1))">';
         html += '</div>';
     }
-    html += '<div style="margin-bottom:12px;">';
-    html += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px;background:rgba(255,255,255,0.04);border-radius:8px;">';
-    html += '<input type="checkbox" id="swal-gift" onchange="shopToggleGift()" style="width:16px;height:16px;cursor:pointer;">';
+
+    // Gift toggle
+    html += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px;background:rgba(255,255,255,0.04);border-radius:8px;margin:0;">';
+    html += '<input type="checkbox" id="swal-gift" onchange="shopToggleGift()" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;">';
     html += '<span><i class="fas fa-gift" style="color:var(--color-accent);"></i> \u0e2a\u0e48\u0e07\u0e40\u0e1b\u0e47\u0e19\u0e02\u0e2d\u0e07\u0e02\u0e27\u0e31\u0e0d\u0e43\u0e2b\u0e49\u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e19</span>';
-    html += '</label></div>';
-    html += '<div id="gift-section" style="display:none;margin-bottom:12px;">';
+    html += '</label>';
+
+    // Gift recipient (hidden by default)
+    html += '<div id="gift-section" style="display:none;">';
     html += '<label style="font-size:12px;opacity:0.6;display:block;margin-bottom:4px;">\u0e0a\u0e37\u0e48\u0e2d\u0e1c\u0e39\u0e49\u0e40\u0e25\u0e48\u0e19\u0e17\u0e35\u0e48\u0e23\u0e31\u0e1a\u0e02\u0e2d\u0e07\u0e02\u0e27\u0e31\u0e0d</label>';
-    html += '<input type="text" id="swal-gift-to" placeholder="username \u0e43\u0e19\u0e40\u0e01\u0e21" style="width:100%;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:inherit;font-size:14px;">';
-    html += '<p style="font-size:11px;opacity:0.4;margin-top:4px;">\u0e1c\u0e39\u0e49\u0e23\u0e31\u0e1a\u0e15\u0e49\u0e2d\u0e07\u0e2d\u0e2d\u0e19\u0e44\u0e25\u0e19\u0e4c\u0e2d\u0e22\u0e39\u0e48\u0e43\u0e19\u0e40\u0e0b\u0e34\u0e23\u0e4c\u0e1f\u0e40\u0e27\u0e2d\u0e23\u0e4c\u0e01\u0e48\u0e2d\u0e19</p>';
+    html += '<input type="text" id="swal-gift-to" placeholder="username \u0e43\u0e19\u0e40\u0e01\u0e21" style="width:100%;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:inherit;font-size:14px;box-sizing:border-box;">';
+    html += '<p style="font-size:11px;opacity:0.4;margin:4px 0 0;">\u0e1c\u0e39\u0e49\u0e23\u0e31\u0e1a\u0e15\u0e49\u0e2d\u0e07\u0e2d\u0e2d\u0e19\u0e44\u0e25\u0e19\u0e4c\u0e2d\u0e22\u0e39\u0e48\u0e43\u0e19\u0e40\u0e0b\u0e34\u0e23\u0e4c\u0e1f\u0e40\u0e27\u0e2d\u0e23\u0e4c\u0e01\u0e48\u0e2d\u0e19</p>';
     html += '</div>';
-    html += '<div style="font-size:12px;opacity:0.5;text-align:center;margin-top:4px;">\u0e22\u0e2d\u0e14\u0e23\u0e27\u0e21: <strong id="swal-total">' + formatMoney(price) + '</strong></div>';
+
+    // Total
+    html += '<div style="font-size:12px;opacity:0.6;text-align:center;padding:6px;border-top:1px solid rgba(255,255,255,0.08);">\u0e22\u0e2d\u0e14\u0e23\u0e27\u0e21: <strong id="swal-total" style="color:var(--color-accent);">' + formatMoney(price) + '</strong></div>';
+
     html += '</div>';
 
     Swal.fire({
