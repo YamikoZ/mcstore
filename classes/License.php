@@ -10,7 +10,7 @@
  * ชั้นที่ 6 — Cache + Grace period : เร็ว + ทนทานถ้า GitHub ล่ม
  */
 class License {
-    const CACHE_TTL         = 300;    // cache 5 นาที
+    const CACHE_TTL         = 86400;  // cache 24 ชั่วโมง
     const REVOKED_CACHE_TTL = 60;     // revoked cache 1 นาที (มีผลเร็ว)
     const GRACE_DAYS        = 7;      // ถ้า GitHub ล่ม → ใช้ผลเดิม 7 วัน
 
@@ -125,7 +125,10 @@ class License {
         }
 
         $lic    = $data[$key];
-        $domain = $_SERVER['HTTP_HOST'] ?? '';
+        // Normalize HTTP_HOST: strip port and www. prefix
+        $domain = strtolower($_SERVER['HTTP_HOST'] ?? '');
+        $domain = preg_replace('/:\d+$/', '', $domain);          // strip :port
+        $domain = preg_replace('/^www\./', '', $domain);          // strip www.
 
         // ชั้น 2: ถูกระงับ
         if (!($lic['active'] ?? false)) {
