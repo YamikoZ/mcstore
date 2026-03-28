@@ -65,10 +65,7 @@ $isOnline = $db->fetch(
 );
 if (!$isOnline) {
     $who = empty($giftTo) ? 'คุณ' : "ผู้เล่น \"{$recipientName}\"";
-    // DEBUG — remove after testing
-    $debugRow = $db->fetch("SELECT username, server_id, updated_at FROM online_players WHERE LOWER(username) = LOWER(?)", [$recipientName]);
-    $debugMsg = "[DEBUG] recipientName={$recipientName} serverId={$serverId} | row=" . json_encode($debugRow);
-    jsonResponse(['success' => false, 'message' => "{$who} ต้องออนไลน์อยู่ในเซิร์ฟเวอร์ก่อนจึงจะซื้อได้", 'debug' => $debugMsg]);
+    jsonResponse(['success' => false, 'message' => "{$who} ต้องออนไลน์อยู่ในเซิร์ฟเวอร์ก่อนจึงจะซื้อได้"]);
 }
 
 // ─── One-per-user check (แรงค์/VIP ห้ามซื้อซ้ำ) ──────────────────────────
@@ -99,14 +96,8 @@ if ($user['balance'] < $total) {
     jsonResponse(['success' => false, 'message' => 'ยอดเงินไม่เพียงพอ (มี ' . formatMoney($user['balance']) . ' ต้องการ ' . formatMoney($total) . ')']);
 }
 
-// ─── Parse commands (รองรับ single string และ JSON array สำหรับ set) ─────
-$commands = json_decode($product['command'], true);
-if (!is_array($commands)) {
-    $commands = [$product['command']];
-}
-$commands = array_filter($commands); // กรองค่าว่าง
-
-if (empty($commands)) {
+// ─── Validate commands exist ──────────────────────────────────────────────
+if (empty(trim($product['command'] ?? ''))) {
     jsonResponse(['success' => false, 'message' => 'สินค้านี้ยังไม่มี command กรุณาติดต่อผู้ดูแล'], 500);
 }
 
@@ -148,13 +139,9 @@ try {
     }
 
     // Delivery queue — วน quantity × commands (set items รองรับครบ)
+    $builtCmds = buildDeliveryCommands($product['command'], $recipientName, $quantity);
     for ($q = 0; $q < $quantity; $q++) {
-        foreach ($commands as $cmd) {
-            $finalCmd = str_replace(
-                ['{player}', '{username}', '{amount}'],
-                [$recipientName, $recipientName, (string)$quantity],
-                $cmd
-            );
+        foreach ($builtCmds as $finalCmd) {
             $db->execute(
                 "INSERT INTO delivery_queue (order_id, username, server_id, player_name, command, item_name) VALUES (?, ?, ?, ?, ?, ?)",
                 [$orderId, $recipientName, $serverId, $recipientName, $finalCmd, $product['name']]

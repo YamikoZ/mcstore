@@ -10,8 +10,8 @@
  * ชั้นที่ 6 — Cache + Grace period : เร็ว + ทนทานถ้า GitHub ล่ม
  */
 class License {
-    const CACHE_TTL         = 0;      // ไม่ cache — ตรวจ GitHub ทุก request
-    const REVOKED_CACHE_TTL = 0;      // ไม่ cache
+    const CACHE_TTL         = 300;    // cache 5 นาที
+    const REVOKED_CACHE_TTL = 60;     // revoked cache 1 นาที (มีผลเร็ว)
     const GRACE_DAYS        = 7;      // ถ้า GitHub ล่ม → ใช้ผลเดิม 7 วัน
 
     private static $result         = null;
@@ -140,19 +140,26 @@ class License {
         }
 
         $licDomain = $lic['domain'] ?? '';
+        $licIp     = $lic['ip']     ?? '';
+        $serverIp  = $_SERVER['SERVER_ADDR'] ?? '';
 
-        // First activation — lock domain + write back
-        if (empty($licDomain)) {
+        // First activation — lock domain + IP + write back
+        if (empty($licDomain) && empty($licIp)) {
             $data[$key]['domain']       = $domain;
+            $data[$key]['ip']           = $serverIp;
             $data[$key]['activated_at'] = date('Y-m-d H:i:s');
-            $data[$key]['activated_ip'] = $_SERVER['SERVER_ADDR'] ?? '';
+            $data[$key]['activated_ip'] = $serverIp;
             $newContent = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             self::githubPatch($cfg['gist_id'], $cfg['token'], $filename, $newContent);
             self::$reason = 'valid';
             return true;
         }
 
-        if ($licDomain !== $domain) {
+        // ตรวจ: ผ่านถ้า domain ตรง หรือ IP ตรง อย่างใดอย่างหนึ่ง
+        $domainMatch = !empty($licDomain) && $licDomain === $domain;
+        $ipMatch     = !empty($licIp)     && ($licIp === $domain || $licIp === $serverIp);
+
+        if (!$domainMatch && !$ipMatch) {
             self::$reason = 'domain_mismatch';
             return false;
         }
@@ -178,8 +185,8 @@ class License {
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_TIMEOUT        => 8,
                 CURLOPT_CONNECTTIMEOUT => 5,
-                CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_SSL_VERIFYHOST => false,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
                 CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
                 CURLOPT_HTTPHEADER     => $headers,
             ]);
@@ -197,8 +204,8 @@ class License {
                     'method'  => 'GET',
                 ],
                 'ssl' => [
-                    'verify_peer'      => false,
-                    'verify_peer_name' => false,
+                    'verify_peer'      => true,
+                    'verify_peer_name' => true,
                 ],
             ]);
             $body = @file_get_contents($url, false, $ctx);
@@ -217,8 +224,8 @@ class License {
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 8,
             CURLOPT_CONNECTTIMEOUT => 5,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
             CURLOPT_CUSTOMREQUEST  => 'PATCH',
             CURLOPT_POSTFIELDS     => $payload,

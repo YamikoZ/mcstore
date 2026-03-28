@@ -818,3 +818,15 @@ UNLOCK TABLES;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2026-03-27 18:37:37
+
+-- ─── online_players (Plugin รายงาน player ที่ online อยู่) ──────────────────
+CREATE TABLE IF NOT EXISTS `online_players` (
+  `id`         INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+  `username`   VARCHAR(36)      NOT NULL,
+  `server_id`  VARCHAR(64)      NOT NULL,
+  `updated_at` DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_player_server` (`username`, `server_id`),
+  KEY `idx_server` (`server_id`),
+  KEY `idx_updated` (`updated_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

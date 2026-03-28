@@ -662,6 +662,25 @@ include BASE_PATH . '/layout/header.php';
 </div>
 
 <script>
+// Cart
+var HOME_CART_URL  = '<?= e(url("api/cart/update")) ?>';
+var HOME_CART_CSRF = '<?= e($_SESSION['csrf_token'] ?? '') ?>';
+function addToCart(productId, serverId) {
+    fetch(HOME_CART_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add', product_id: productId, server_id: serverId, quantity: 1, _csrf: HOME_CART_CSRF })
+    }).then(r => r.json()).then(function(d) {
+        if (d.success) {
+            Swal.fire({ icon: 'success', title: 'เพิ่มในตะกร้าแล้ว!', timer: 1200, showConfirmButton: false });
+        } else {
+            Swal.fire({ icon: 'warning', title: d.message || 'เกิดข้อผิดพลาด' });
+        }
+    }).catch(function() {
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด' });
+    });
+}
+
 // Banner slider
 <?php if (count($banners ?? []) > 1): ?>
 let currentSlide = 0;

@@ -80,8 +80,8 @@ class Voucher
                 'X-API-Key: ' . $this->proxyKey,
             ],
             CURLOPT_TIMEOUT        => 20,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
         ]);
 
         $resp     = curl_exec($ch);
@@ -181,8 +181,8 @@ class Voucher
             ],
             CURLOPT_ENCODING       => '',
             CURLOPT_TIMEOUT        => 15,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
         ]);
 
         if (defined('CURL_HTTP_VERSION_2_0')) {

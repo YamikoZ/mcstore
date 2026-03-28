@@ -69,11 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Queue delivery commands
             if ($oi['product']['command']) {
-                $commands = json_decode($oi['product']['command'], true) ?: [$oi['product']['command']];
+                $builtCmds = buildDeliveryCommands($oi['product']['command'], $user['username'], $oi['quantity']);
                 for ($q = 0; $q < $oi['quantity']; $q++) {
-                    foreach ($commands as $cmd) {
-                        $finalCmd = str_replace('{player}', $user['username'], $cmd);
-                        $finalCmd = str_replace('{amount}', (string)$oi['quantity'], $finalCmd);
+                    foreach ($builtCmds as $finalCmd) {
                         $db->execute(
                             "INSERT INTO delivery_queue (order_id, username, server_id, player_name, command, item_name) VALUES (?, ?, ?, ?, ?, ?)",
                             [$orderId, $user['username'], $oi['server_id'], $user['username'], $finalCmd, $oi['product']['name']]

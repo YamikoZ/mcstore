@@ -67,6 +67,47 @@ function jsonResponse($data, $code = 200) {
     exit;
 }
 
+/**
+ * ตรวจ command ว่าอยู่ใน whitelist หรือไม่
+ * คืน true ถ้าปลอดภัย, false ถ้าต้องบล็อก
+ */
+function commandIsAllowed(string $cmd): bool {
+    $whitelist = json_decode(Settings::get('command_whitelist', '["give","lp","eco","say","mi","mm","kit","mmoitems"]'), true);
+    if (!is_array($whitelist) || empty($whitelist)) return true; // ถ้าไม่ตั้งค่า → อนุญาตทั้งหมด
+    $firstWord = strtolower(trim(explode(' ', ltrim($cmd, '/'))[0]));
+    return in_array($firstWord, array_map('strtolower', $whitelist), true);
+}
+
+/**
+ * แทนที่ placeholder ใน command และตรวจ whitelist
+ * คืน array ของ commands ที่ผ่านการ sanitize แล้ว
+ * โยน Exception ถ้ามี command ไม่ผ่าน whitelist
+ */
+function buildDeliveryCommands(string $cmdJson, string $playerName, int $quantity): array {
+    $commands = json_decode($cmdJson, true);
+    if (!is_array($commands)) {
+        $commands = [$cmdJson];
+    }
+    $commands = array_filter($commands);
+    $result = [];
+    foreach ($commands as $cmd) {
+        $finalCmd = str_replace(
+            ['{player}', '{username}', '{amount}'],
+            [
+                preg_replace('/[^a-zA-Z0-9_]/', '', $playerName), // sanitize player name
+                preg_replace('/[^a-zA-Z0-9_]/', '', $playerName),
+                (string)(int)$quantity,
+            ],
+            $cmd
+        );
+        if (!commandIsAllowed($finalCmd)) {
+            throw new \RuntimeException("Command ไม่ได้รับอนุญาต: " . substr($finalCmd, 0, 30));
+        }
+        $result[] = $finalCmd;
+    }
+    return $result;
+}
+
 function rateLimitCheck($action, $maxAttempts = 5, $windowSeconds = 300) {
     $db = Database::getInstance();
     $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';

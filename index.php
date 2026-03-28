@@ -194,6 +194,13 @@ switch ($page) {
         require BASE_PATH . '/pages/topup.php';
         break;
 
+    // --- Cart ---
+    case 'cart':
+        $requireFeature('shop_enabled');
+        $requireAuth();
+        require BASE_PATH . '/pages/cart.php';
+        break;
+
     // --- Checkout ---
     case 'checkout':
         $requireFeature('shop_enabled');

@@ -76,10 +76,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 $msg = "ได้รับ " . formatMoney($amount) . "!";
             } elseif ($rewardType === 'command') {
-                $commands = json_decode($rewardValue, true) ?: [$rewardValue];
-                $serverId = $redeemCode['server_id'] ?? 1;
-                foreach ($commands as $cmd) {
-                    $finalCmd = str_replace('{player}', $user['username'], $cmd);
+                $serverId   = $redeemCode['server_id'] ?? 1;
+                $topupCmds  = buildDeliveryCommands($rewardValue, $user['username'], 1);
+                foreach ($topupCmds as $finalCmd) {
                     $db->execute(
                         "INSERT INTO delivery_queue (username, server_id, player_name, command, item_name) VALUES (?, ?, ?, ?, ?)",
                         [$user['username'], $serverId, $user['username'], $finalCmd, 'ไอเทมรีดีม']

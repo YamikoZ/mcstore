@@ -69,9 +69,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['spin']) && Auth::chec
         $db->execute("INSERT INTO gacha_history (username, crate_id, reward_id, rarity) VALUES (?, ?, ?, ?)",
             [$user['username'], $spinCrateId, $won['id'], $won['rarity']]);
         if ($won['command']) {
-            $finalCmd = str_replace('{player}', $user['username'], $won['command']);
-            $db->execute("INSERT INTO delivery_queue (username, server_id, player_name, command, item_name, status) VALUES (?, ?, ?, ?, ?, 'pending')",
-                [$user['username'], $crate['server_id'], $user['username'], $finalCmd, $won['name']]);
+            $gachaCmds = buildDeliveryCommands($won['command'], $user['username'], 1);
+            foreach ($gachaCmds as $finalCmd) {
+                $db->execute("INSERT INTO delivery_queue (username, server_id, player_name, command, item_name, status) VALUES (?, ?, ?, ?, ?, 'pending')",
+                    [$user['username'], $crate['server_id'], $user['username'], $finalCmd, $won['name']]);
+            }
         }
         $db->commit();
 
