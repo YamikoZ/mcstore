@@ -184,7 +184,7 @@ include BASE_PATH . '/layout/header.php';
 
 <script>
 var SHOP_BUY_URL  = '<?= e(url("api/shop/buynow")) ?>';
-var SHOP_CSRF     = '<?= e(csrf_token()) ?>';
+var SHOP_CSRF     = '<?= e($_SESSION["csrf_token"] ?? "") ?>';
 
 function formatMoney(n) {
     return parseFloat(n).toLocaleString('th-TH', {minimumFractionDigits: 2}) + ' \u0e1a\u0e32\u0e17';
