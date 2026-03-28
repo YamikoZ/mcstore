@@ -213,7 +213,7 @@ include BASE_PATH . '/layout/admin_header.php';
                             <input type="text" name="commands[]" value="<?= e($c) ?>"
                                    class="flex-1 px-3 py-2 rounded-lg border border-white/10 text-sm font-mono"
                                    style="background-color: var(--color-surface-dark);"
-                                   placeholder="give {player} item 1">
+                                   placeholder="mmoitems give TYPE ITEM_NAME {player} 1">
                             <button type="button" onclick="removeCmd(this)" class="px-2 py-2 rounded-lg text-red-400 hover:bg-red-400/10 transition text-sm" title="ลบ">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -223,12 +223,17 @@ include BASE_PATH . '/layout/admin_header.php';
                     <button type="button" onclick="addCmd()" class="mt-2 px-3 py-1.5 rounded-lg border border-white/10 text-xs hover:bg-white/5 transition">
                         <i class="fas fa-plus mr-1"></i> เพิ่มคำสั่ง
                     </button>
-                    <p class="text-xs opacity-40 mt-2">ใช้ {player} แทนชื่อผู้เล่น · {amount} แทนจำนวน · หลายคำสั่ง = ชุดเซ็ต</p>
+                    <div class="mt-2 text-xs opacity-50 space-y-0.5">
+                        <p>ใช้ <code class="bg-white/10 px-1 rounded">{player}</code> แทนชื่อผู้เล่น · <code class="bg-white/10 px-1 rounded">{amount}</code> แทนจำนวน · หลายคำสั่ง = ชุดเซ็ต</p>
+                        <p>Vanilla:   <code class="bg-white/10 px-1 rounded">give {player} diamond 1</code></p>
+                        <p>MMOItems:  <code class="bg-white/10 px-1 rounded">mmoitems give SWORD BEGINNER_SWORD {player} 1</code></p>
+                        <p>LuckPerms: <code class="bg-white/10 px-1 rounded">lp user {player} parent set vip</code></p>
+                    </div>
                     <script>
                     function addCmd() {
                         const row = document.createElement('div');
                         row.className = 'cmd-row flex gap-2 items-center';
-                        row.innerHTML = '<input type="text" name="commands[]" class="flex-1 px-3 py-2 rounded-lg border border-white/10 text-sm font-mono" style="background-color:var(--color-surface-dark);" placeholder="give {player} item 1">'
+                        row.innerHTML = '<input type="text" name="commands[]" class="flex-1 px-3 py-2 rounded-lg border border-white/10 text-sm font-mono" style="background-color:var(--color-surface-dark);" placeholder="mmoitems give TYPE ITEM_NAME {player} 1">'
                             + '<button type="button" onclick="removeCmd(this)" class="px-2 py-2 rounded-lg text-red-400 hover:bg-red-400/10 transition text-sm"><i class="fas fa-times"></i></button>';
                         document.getElementById('cmd-list').appendChild(row);
                         row.querySelector('input').focus();
