@@ -215,14 +215,6 @@ function openBuyModal(btn) {
     }
     html += '</div></div>';
 
-    // Quantity
-    if (!isOnePerUser) {
-        html += '<div style="display:flex;align-items:center;gap:12px;">';
-        html += '<label style="font-size:13px;opacity:0.6;white-space:nowrap;min-width:80px;">\u0e08\u0e33\u0e19\u0e27\u0e19</label>';
-        html += '<input type="number" id="swal-qty" min="1" max="99" value="1" style="' + iStyle + 'text-align:center;font-size:16px;font-weight:600;" oninput="document.getElementById(\'swal-total\').textContent=formatMoney(' + price + '*Math.max(1,parseInt(this.value)||1))">';
-        html += '</div>';
-    }
-
     // Divider
     html += '<div style="border-top:1px solid rgba(255,255,255,0.07);"></div>';
 
@@ -259,8 +251,7 @@ function openBuyModal(btn) {
         background: 'var(--color-surface)',
         color: 'var(--color-text)',
         preConfirm: function() {
-            var qtyEl = document.getElementById('swal-qty');
-            var qty = isOnePerUser ? 1 : Math.max(1, Math.min(99, parseInt(qtyEl ? qtyEl.value : '1') || 1));
+            var qty = 1;
             var isGift = document.getElementById('swal-gift').checked;
             var giftTo = isGift ? document.getElementById('swal-gift-to').value.trim() : '';
             if (isGift && !giftTo) {
