@@ -21,7 +21,7 @@ include BASE_PATH . '/layout/header.php';
         <div class="prose prose-invert max-w-none leading-relaxed">
             <?= $page['content'] ?>
         </div>
-        <p class="text-xs opacity-30 mt-8">อัพเดทล่าสุด: <?= e($page['updated_at'] ?? $page['created_at']) ?></p>
+        <p class="text-xs opacity-30 mt-8">อัพเดทล่าสุด: <?= e($page['updated_at'] ?? $page['created_at'] ?? '-') ?></p>
     </div>
 </div>
 
