@@ -147,7 +147,7 @@ include BASE_PATH . '/layout/header.php';
                                         <span class="text-lg font-bold" style="color: var(--color-accent);"><?= formatMoney($prod['price']) ?></span>
                                     </div>
                                     <?php if (Auth::check()): ?>
-                                        <button onclick="openBuyModal(<?= (int)$prod['id'] ?>, '<?= e($currentServer['id']) ?>', <?= (float)$prod['price'] ?>, <?= $prod['one_per_user'] ? 'true' : 'false' ?>, '<?= e(addslashes($prod['name'])) ?>')"
+                                        <button onclick="openBuyModal(<?= (int)$prod['id'] ?>, <?= json_encode($currentServer['id']) ?>, <?= (float)$prod['price'] ?>, <?= $prod['one_per_user'] ? 'true' : 'false' ?>, <?= json_encode($prod['name']) ?>)"
                                                 class="btn-primary px-4 py-2 rounded-lg text-sm font-semibold">
                                             <i class="fas fa-bolt mr-1"></i> ซื้อเลย
                                         </button>
