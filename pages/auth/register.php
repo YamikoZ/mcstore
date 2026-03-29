@@ -49,6 +49,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $userId = Auth::register($username, $password, $email);
     Auth::login($username, $password);
     auditLog($userId, 'register', 'New user registered');
+
+    sendWebhook('users', '👤 สมัครสมาชิกใหม่',
+        "**{$username}** เพิ่งสมัครสมาชิก",
+        0x3498DB,
+        $email ? [['name' => 'อีเมล', 'value' => $email, 'inline' => true]] : []
+    );
     flash('success', 'สมัครสมาชิกสำเร็จ! ยินดีต้อนรับ!');
     redirect('');
 }

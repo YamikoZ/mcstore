@@ -165,6 +165,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $successMsg = "เติมเงิน {$netAmount} บาท สำเร็จ!";
             if ($fee > 0) $successMsg .= " (หักค่าธรรมเนียม {$fee} บาท จากยอด {$grossAmount} บาท)";
             createNotification($user['id'], 'เติมเงินสำเร็จ', $successMsg, 'success', 'profile/wallet');
+
+            sendWebhook('payments', '💰 เติมเงินสำเร็จ',
+                "**{$user['username']}** เติมผ่าน TrueWallet",
+                0x57F287,
+                [
+                    ['name' => 'ยอดรวม',      'value' => "{$grossAmount} ฿", 'inline' => true],
+                    ['name' => 'ค่าธรรมเนียม', 'value' => "{$fee} ฿",        'inline' => true],
+                    ['name' => 'ได้รับ',        'value' => "{$netAmount} ฿",  'inline' => true],
+                ]
+            );
             flash('success', $successMsg);
         } catch (Exception $e) {
             $db->rollback();

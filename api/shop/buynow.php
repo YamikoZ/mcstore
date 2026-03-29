@@ -162,6 +162,19 @@ try {
         : $product['name'] . ' x' . $quantity . ' — ' . formatMoney($total);
     createNotification($user['id'], $isGift ? 'ส่งของขวัญสำเร็จ' : 'ซื้อสำเร็จ', $notifMsg, 'success', 'orders');
 
+    sendWebhook('orders',
+        $isGift ? '🎁 ส่งของขวัญ' : '🛒 ออเดอร์ใหม่',
+        $isGift
+            ? "{$user['username']} ส่งของขวัญให้ **{$recipientName}**"
+            : "**{$user['username']}** ซื้อสำเร็จ",
+        $isGift ? 0xF1C40F : 0x57F287,
+        [
+            ['name' => 'สินค้า',   'value' => $product['name'] . ' x' . $quantity, 'inline' => true],
+            ['name' => 'ยอด',      'value' => formatMoney($total),                  'inline' => true],
+            ['name' => 'Order #',  'value' => (string)$orderId,                     'inline' => true],
+        ]
+    );
+
     jsonResponse([
         'success'  => true,
         'message'  => $isGift ? "ส่งของขวัญให้ {$recipientName} สำเร็จ!" : 'ซื้อสำเร็จ! กำลังส่งของเข้าเกม...',

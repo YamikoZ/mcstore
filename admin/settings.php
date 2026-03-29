@@ -211,7 +211,7 @@ $enumOptions = [
 ];
 
 // Sensitive fields (mask display)
-$sensitiveKeys = ['tw_proxy_key', 'plugin_api_secret', 'discord_webhook'];
+$sensitiveKeys = ['tw_proxy_key', 'plugin_api_secret', 'discord_webhook', 'webhook_orders', 'webhook_payments', 'webhook_users', 'webhook_system'];
 
 // Generatable keys (show generate button)
 $generatableKeys = ['plugin_api_secret', 'tw_proxy_key'];

@@ -87,6 +87,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->commit();
         auditLog($user['id'], 'redeem', "Redeemed code: {$code}");
         createNotification($user['id'], 'รีดีมสำเร็จ', $msg, 'success');
+
+        sendWebhook('payments', '🎟️ รีดีมโค้ด',
+            "**{$user['username']}** ใช้โค้ด `{$code}` — {$msg}",
+            0xA855F7
+        );
         flash('success', $msg);
     } catch (Exception $e) {
         $db->rollback();

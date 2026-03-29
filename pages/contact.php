@@ -30,7 +30,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         "INSERT INTO contact_messages (username, name, email, subject, message) VALUES (?, ?, ?, ?, ?)",
         [Auth::check() ? Auth::user()['username'] : null, $name, $email, $subject, $message]
     );
-    
+
+    sendWebhook('system', '📩 ข้อความจากลูกค้า',
+        "**{$subject}**\n{$message}",
+        0xE67E22,
+        [
+            ['name' => 'ชื่อ',  'value' => $name,  'inline' => true],
+            ['name' => 'อีเมล', 'value' => $email, 'inline' => true],
+        ]
+    );
     flash('success', 'ส่งข้อความสำเร็จ! เราจะตอบกลับโดยเร็ว');
     redirect('contact');
 }

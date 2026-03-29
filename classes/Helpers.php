@@ -169,6 +169,45 @@ function createNotification($userIdentifier, $title, $message, $type = 'info', $
 }
 
 /**
+ * ส่ง Discord Webhook embed
+ * @param string $channel  'orders' | 'payments' | 'users' | 'system'
+ * @param string $title    หัวข้อ embed
+ * @param string $desc     รายละเอียด
+ * @param int    $color    สี hex ตัวเลข (default เขียว)
+ * @param array  $fields   [['name'=>'', 'value'=>'', 'inline'=>bool], ...]
+ */
+function sendWebhook(string $channel, string $title, string $desc, int $color = 0x57F287, array $fields = []): void {
+    $key = 'webhook_' . $channel;
+    $url = Settings::get($key, '');
+    if (!$url || !str_starts_with($url, 'https://')) return;
+
+    $embed = [
+        'title'       => $title,
+        'description' => $desc,
+        'color'       => $color,
+        'timestamp'   => date('c'),
+        'footer'      => ['text' => Settings::get('site_name', 'MCStore')],
+    ];
+    if (!empty($fields)) $embed['fields'] = $fields;
+
+    $payload = json_encode(['embeds' => [$embed]], JSON_UNESCAPED_UNICODE);
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_TIMEOUT        => 5,
+            CURLOPT_CONNECTTIMEOUT => 3,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+        ]);
+        curl_exec($ch);
+        curl_close($ch);
+    }
+}
+
+/**
  * Render ‹ 1 2 3 › pagination HTML
  * @param int $currentPage  current page (1-based)
  * @param int $totalPages   total number of pages
